@@ -17,6 +17,7 @@
 #include "inputdev.h"
 
 #include <algorithm>
+#include <cassert>
 #define __STDC_FORMAT_MACROS // Required for format specifiers
 #include <inttypes.h>
 #include <unistd.h>
@@ -46,6 +47,14 @@ private:
 	dev_t			dev_t_;
 
 public:
+	// the vdr list implementation requires knowledge about the containing
+	// list when unlinking a object :(
+	enum {
+		lstNONE,
+		lstDEVICES,
+		lstGC
+	}			container;
+
 	cInputDevice(cInputDeviceController &controller,
 		     cString const &dev_path);
 	~cInputDevice();
@@ -477,6 +486,8 @@ void cInputDeviceController::cleanup_devices(void)
 	dev_mutex_.Lock();
 	while (gc_devices_.Count() > 0) {
 		class cInputDevice *dev = gc_devices_.First();
+
+		assert(dev->container == cInputDevice::lstGC);
 		gc_devices_.Del(dev, false);
 
 		dev_mutex_.Unlock();
@@ -556,8 +567,11 @@ void cInputDeviceController::remove_device(char const *dev_path)
 		if (dev != NULL) {
 			dev->stop(fd_epoll_);
 
-			dev->Unlink();
+			assert(dev->container == cInputDevice::lstDEVICES);
+			devices_.Del(dev, false);
+
 			gc_devices_.Add(dev);
+			dev->container = cInputDevice::lstGC;
 		}
 	}
 
@@ -573,8 +587,20 @@ void cInputDeviceController::remove_device(class cInputDevice *dev)
 	dev->stop(fd_epoll_);
 
 	dev_mutex_.Lock();
-	dev->Unlink();
+	switch (dev->container) {
+	case cInputDevice::lstDEVICES:
+		devices_.Del(dev, false);
+		break;
+	case cInputDevice::lstGC:
+		gc_devices_.Del(dev, false);
+		break;
+	case cInputDevice::lstNONE:
+		break;
+	}
+
 	gc_devices_.Add(dev);
+	dev->container = cInputDevice::lstGC;
+
 	dev_mutex_.Unlock();
 }
 
@@ -611,6 +637,7 @@ bool cInputDeviceController::add_device(char const *dev_name)
 			isyslog("%s: added input device '%s' (%s)\n",
 				plugin_name(), dev_name, desc);
 			devices_.Add(dev);
+			dev->container = cInputDevice::lstDEVICES;
 		}
 	}
 
