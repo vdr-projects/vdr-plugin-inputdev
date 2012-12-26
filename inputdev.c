@@ -124,7 +124,7 @@ void cInputDevice::install_keymap(char const *remote)
 		{ kDown,	KEY_DOWN },
 		{ kMenu,	KEY_MENU },
 		{ kOk,		KEY_OK },
-		{ kBack,	KEY_BACKSPACE },	// \todo
+		{ kBack,	KEY_EXIT },	// \todo
 		{ kLeft,	KEY_LEFT },
 		{ kRight,	KEY_RIGHT },
 		{ kRed,		KEY_RED },
@@ -147,8 +147,8 @@ void cInputDevice::install_keymap(char const *remote)
 		{ kPause,	KEY_PAUSE },
 		{ kStop,	KEY_STOP },
 		{ kRecord,	KEY_RECORD },
-		{ kFastFwd,	KEY_FORWARD }, // \todo
-		{ kFastRew,	KEY_BACK },	// \todo
+		{ kFastFwd,	KEY_FORWARD },
+		{ kFastRew,	KEY_REWIND },
 		{ kNext,	KEY_NEXTSONG },
 		{ kPrev,	KEY_PREVIOUSSONG },
 		{ kPower,	KEY_POWER },
@@ -165,7 +165,7 @@ void cInputDevice::install_keymap(char const *remote)
 		{ kTimers,	KEY_PROGRAM }, // \todo
 		{ kRecordings,	KEY_ARCHIVE }, // \todo
 		{ kSetup,	KEY_SETUP },
-		{ kCommands,	KEY_VENDOR }, // \todo
+		{ kCommands,	KEY_OPTION }, // \todo
 		{ kUser0,	KEY_FN_F10 },
 		{ kUser1,	KEY_FN_F1 },
 		{ kUser2,	KEY_FN_F2 },
