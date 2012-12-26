@@ -1,0 +1,32 @@
+SUBSYSTEM!="input", GOTO="vdrkeymap_end"
+KERNEL!="event*",   GOTO="vdrkeymap_end"
+
+#### blacklist input devices which shall not be used by 'vdr'
+
+# HAMA MCE remote control
+ENV{ID_VENDOR_ID}=="05a4", ENV{ID_MODEL_ID}=="9881", GOTO="vdrkeymap_end"
+
+
+#### install custom keymaps
+
+# x10-wti
+ENV{ID_VENDOR_ID}=="0bc7", ENV{ID_MODEL_ID}=="0006", ENV{ID_INPUT_KEY}=="1", RUN+="keymap $name x10-wti"
+
+# TT6400 remote control
+ATTRS{vendor}=="0x1131", ATTRS{device}=="0x7160", RUN+="keymap $name tt6400-ir"
+
+
+#### do 'vdr' specific actions
+
+# generate hotplug event
+RUN+="vdr-inputdev $name"
+
+# create coldplug entry
+SYMLINK+="vdr/$name"
+
+# set permissions
+MODE="0640", OWNER="vdr"
+
+
+
+LABEL="vdrkeymap_end"

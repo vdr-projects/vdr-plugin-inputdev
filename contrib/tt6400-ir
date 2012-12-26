@@ -1,0 +1,129 @@
+## Standard Remote control
+0x160001 power
+0x160018 mute
+
+0x160003 kp1
+0x160004 kp2
+0x160005 kp3
+0x160006 kp4
+0x160007 kp5
+0x160008 kp6
+0x160009 kp7
+0x16000a kp8
+0x16000b kp9
+0x16000c kp0
+
+#0x160031 delete
+0x160031 info
+#0x16001a tv
+0x16001a option
+
+# 0x16001b tool
+# 0x160027 menu
+# 0x160021 opt
+# 0x160002 backspace
+0x16001b channel
+0x160027 archive
+0x160021 audio
+0x160002 previous
+
+0x160023 channelup
+0x160024 channeldown
+0x160012 menu		# '!'
+0x160019 subtitle	# "TXT"
+0x160025 volumeup
+0x160026 volumedown
+0x160014 red
+0x160015 green
+0x160016 yellow
+0x160017 blue
+0x16000d up
+0x16000e left
+0x160010 right
+0x160011 down
+0x16000f ok
+0x160022 epg
+0x160013 exit
+0x160053 record
+0x160054 rewind
+#0x160055 playpause
+0x160055 play
+0x160056 forward
+#0x160046 pvr
+0x160046 fn_f1		# PVR
+0x160047 previoussong
+0x160035 stop
+0x160030 nextsong
+
+# last two rows of the standard remote control
+0x21 fn_f2	# tv channel -
+0x20 fn_f3	# tv channel +
+0x11 fn_f4	# tv volume -
+0x10 fn_f5	# tv volume +
+0x0c fn_f6	# tv power
+0x38 fn_f7	# tv input
+
+
+## Hauppauge remote control
+
+#0x1e003b goto		# "Go"
+0x1e003b program	# "Go"
+0x1e003d power
+
+#0x1e001c tv
+0x1e001c channel	# "TV"
+#0x1e0018 video		# "Videos"
+0x1e0018 archive	# "Videos"
+0x1e0019 audio		# "Music"
+#0x1e001a directory	# "Pictures"
+0x1e001a info		# "Pictures"
+
+0x1e001b epg		# "Guide"
+#0x1e000c radio
+0x1e000c subtitle
+
+0x1e0014 up
+0x1e0015 down
+0x1e0016 left
+0x1e0017 right
+0x1e0025 ok
+
+0x1e001f exit		# Back/Exit
+0x1e000d menu
+
+0x1e0010 volumeup
+0x1e0011 volumedown
+0x1e0012 previous	# Prev.Ch
+0x1e000f mute
+0x1e0020 channelup
+0x1e0021 channeldown
+
+0x1e0037 record
+0x1e0036 stop
+0x1e0032 rewind
+0x1e0034 forward
+0x1e0035 play
+0x1e0024 previoussong	# |< replay
+0x1e0030 pause
+0x1e001e nextsong	# >| Skip
+
+0x1e0001 kp1
+0x1e0002 kp2
+0x1e0003 kp3
+0x1e0004 kp4
+0x1e0005 kp5
+0x1e0006 kp6
+0x1e0007 kp7
+0x1e0008 kp8
+0x1e0009 kp9
+0x1e0000 kp0
+
+#0x1e000a text		# '*' "Text"
+0x1e000a info		# '*' "Text"
+#0x1e000e subtitle	# '#' Sub/CC
+0x1e000e option		# '#' Sub/CC
+
+0x1e000b red
+0x1e002e green
+0x1e0038 yellow
+0x1e0029 blue
