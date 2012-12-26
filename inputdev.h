@@ -42,6 +42,9 @@ private:
 	void		handle_uevent(void);
 	bool		coldplug_devices(char const *);
 
+	void		dump_active_devices();
+	void		dump_gc_devices();
+
 protected:
 	virtual void	Action(void);
 

@@ -75,6 +75,8 @@ public:
 	char const	*get_description(void) const { return description_; }
 	char const	*get_dev_path(void) const { return dev_path_; }
 
+	void		dump(void) const;
+
 	static uint64_t	generate_code(uint16_t type, uint16_t code,
 				      uint32_t value);
 	static void	install_keymap(char const *remote);
@@ -90,6 +92,13 @@ cInputDevice::cInputDevice(cInputDeviceController &controller,
 cInputDevice::~cInputDevice()
 {
 	controller_.close(fd_);
+}
+
+void cInputDevice::dump(void) const
+{
+	dsyslog("%s:   %lx %s (%s), fd=%d\n", controller_.plugin_name(),
+		static_cast<unsigned long>(dev_t_),
+		get_dev_path(), get_description(), get_fd());
 }
 
 uint64_t cInputDevice::generate_code(uint16_t type, uint16_t code,
@@ -651,6 +660,24 @@ bool cInputDeviceController::add_device(char const *dev_name)
 	return res;
 }
 
+void cInputDeviceController::dump_active_devices(void)
+{
+	cMutexLock	lock(&dev_mutex_);
+
+	dsyslog("%s: active devices:\n", plugin_name());
+	for (cInputDevice *i = devices_.First(); i; i = devices_.Next(i))
+		i->dump();
+}
+
+void cInputDeviceController::dump_gc_devices(void)
+{
+	cMutexLock	lock(&dev_mutex_);
+
+	dsyslog("%s: gc devices:\n", plugin_name());
+	for (cInputDevice *i = gc_devices_.First(); i; i = gc_devices_.Next(i))
+		i->dump();
+}
+
 void cInputDeviceController::handle_uevent(void)
 {
 	char		buf[128];
@@ -687,6 +714,13 @@ void cInputDeviceController::handle_uevent(void)
 		add_device(dev);
 	} else if (strcasecmp(cmd, "remove") == 0) {
 		remove_device(dev);
+	} else if (strcasecmp(cmd, "dump") == 0) {
+		bool	is_all = strcasecmp(dev, "all") == 0;
+		if (is_all || strcasecmp(dev, "active") == 0)
+			dump_active_devices();
+
+		if (is_all || strcasecmp(dev, "gc") == 0)
+			dump_gc_devices();
 	} else {
 		esyslog("%s: invalid command '%s' for '%s'\n", plugin_name(), 
 			cmd, dev);
