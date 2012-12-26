@@ -61,7 +61,7 @@ public:
 	bool		open_udev_socket(char const *sock_path);
 	bool		open_udev_socket(unsigned int systemd_idx);
 
-	void		add_device(char const *dev);
+	bool		add_device(char const *dev);
 	void		remove_device(char const *dev);
 	void		remove_device(class cInputDevice *dev);
 
