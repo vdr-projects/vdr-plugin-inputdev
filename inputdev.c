@@ -57,6 +57,10 @@ public:
 		return this->dev_t_ - b.dev_t_;
 	}
 
+	virtual int Compare(dev_t b) const {
+		return this->dev_t_ - b;
+	}
+
 	void		handle(void);
 	bool		open(void);
 	bool		start(int efd);
@@ -532,8 +536,12 @@ void cInputDeviceController::Action(void)
 void cInputDeviceController::remove_device(char const *dev_path)
 {
 	class cInputDevice	*dev = NULL;
+	struct stat		st;
 
-	{
+	if (stat(dev_path, &st) < 0) {
+		esyslog("%s: fstat(%s) failed: %s\n", plugin_name(),
+			dev_path, strerror(errno));
+	} else {
 		cMutexLock	lock(&dev_mutex_);
 		cInputDevice	*i;
 
