@@ -9,6 +9,7 @@ SYSTEMD_LIBS   = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsyst
 
 SOCKET_PATH = /var/run/vdr/inputdev
 
+AM_CFLAGS   = -DSOCKET_PATH=\"${SOCKET_PATH}\"
 AM_CXXFLAGS = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" ${SYSTEMD_CFLAGS}
 AM_CXXFLAGS +=  -D_FORTIFY_SOURCE=2 -Wall -Werror
 
@@ -91,6 +92,9 @@ $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
 i18n: $(I18Nmsgs) $(I18Npot)
 
 ### Targets:
+
+vdr-inputdev:	udevhelper.c
+	$(CC) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) $^ -o $@
 
 libvdr-$(PLUGIN).so: $(OBJS)
 	$(CXX) $(LDFLAGS) -shared $(OBJS) $(LIBS) -o $@
