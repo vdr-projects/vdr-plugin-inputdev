@@ -295,7 +295,14 @@ void cInputDevice::handle(void)
 	rc = read(fd_, &ev, sizeof ev);
 	if (rc < 0 && errno == EINTR)
 		return;
-	
+
+	if (rc < 0 && errno == ENODEV) {
+		isyslog("%s: device '%s' removed\n",
+			controller_.plugin_name(), get_dev_path());
+		controller_.remove_device(this);
+		return;
+	}
+
 	if (rc < 0) {
 		esyslog("%s: failed to read from %s: %s\n",
 			controller_.plugin_name(), get_dev_path(),
