@@ -51,9 +51,6 @@ public:
 	~cInputDevice();
 
 	virtual int Compare(cInputDevice const &b) const {
-		isyslog("Compare(%s, %s) -> %04lx - %04lx\n",
-			get_dev_path(), b.get_dev_path(),
-			dev_t_, b.dev_t_);
 		return this->dev_t_ - b.dev_t_;
 	}
 
@@ -219,7 +216,6 @@ bool cInputDevice::open(void)
 		goto err;
 	}
 		
-
 	description[sizeof description - 1] = '\0';
 
 	this->dev_t_ = st.st_rdev;
@@ -299,6 +295,12 @@ void cInputDevice::handle(void)
 	if (ev.type == EV_SYN || ev.type >= EV_MAX)
 		// ignore events which are no valid key events
 		return;
+
+	dsyslog("%s: event{%s}=[%lu.%06u, %02x, %04x, %d]\n",
+		controller_.plugin_name(), get_dev_path(),
+		(unsigned long)(ev.time.tv_sec),
+		(unsigned int)(ev.time.tv_usec),
+		ev.type, ev.code, ev.value);
 
 	switch (ev.type) {
 	case EV_KEY:
