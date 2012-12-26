@@ -316,8 +316,8 @@ void cInputDevice::handle(void)
 		return;
 	}
 
-	// \todo: do something useful with EV_SYN...
-	if (ev.type == EV_SYN || ev.type >= EV_MAX)
+	// \todo: do something useful with the other events...
+	if (ev.type != EV_KEY)
 		// ignore events which are no valid key events
 		return;
 
