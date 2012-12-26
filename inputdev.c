@@ -199,7 +199,7 @@ bool cInputDevice::open(void)
 	unsigned long	events_mask[(std::max(EV_CNT,KEY_MAX) +
 				     sizeof(unsigned long) * 8 - 1)/
 				    (sizeof(unsigned long) * 8)];
-	
+
 	fd = ::open(path, O_RDWR);
 	if (fd < 0) {
 		esyslog("%s: open(%s) failed: %s\n", controller_.plugin_name(),
@@ -233,7 +233,7 @@ bool cInputDevice::open(void)
 			controller_.plugin_name(), path);
 		goto err;
 	}
-		
+
 	description[sizeof description - 1] = '\0';
 
 	this->dev_t_ = st.st_rdev;
@@ -399,17 +399,17 @@ bool cInputDeviceController::open_generic(int fd_udev)
 	int			fd_epoll = -1;
 
 	if (this->fd_epoll_ != -1) {
-		esyslog("%s: internal error; epoll fd already open\n", 
+		esyslog("%s: internal error; epoll fd already open\n",
 			plugin_.Name());
 		goto err;
 	}
 
 	if (this->fd_udev_ != -1) {
-		esyslog("%s: internal error; udev fd already open\n", 
+		esyslog("%s: internal error; udev fd already open\n",
 			plugin_.Name());
 		goto err;
 	}
-	
+
 	// requires linux >= 2.6.27
 	fd_epoll = epoll_create1(EPOLL_CLOEXEC);
 	if (fd_epoll < 0) {
@@ -446,11 +446,11 @@ bool cInputDeviceController::open_udev_socket(char const *sock_path)
 	mode_t			old_umask;
 
 	strncpy(addr.sun_path, sock_path, sizeof addr.sun_path);
-	
+
 	/* requires linux >= 2.6.27 */
 	rc = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
 	if (rc < 0) {
-		esyslog("%s: socket() failed: %s\n", 
+		esyslog("%s: socket() failed: %s\n",
 			plugin_.Name(), strerror(errno));
 		goto err;
 	}
@@ -520,7 +520,7 @@ void cInputDeviceController::Action(void)
 		int			rc;
 		size_t			i;
 
-		rc = epoll_wait(fd_epoll_, events, 
+		rc = epoll_wait(fd_epoll_, events,
 				sizeof events/sizeof events[0], -1);
 
 		if (!Running())
@@ -545,8 +545,8 @@ void cInputDeviceController::Action(void)
 						plugin_name());
 					this->Cancel(-1);
 				} else {
-					isyslog("%s: device '%s' (%s) hung up\n", 
-						plugin_name(), 
+					isyslog("%s: device '%s' (%s) hung up\n",
+						plugin_name(),
 						dev->get_dev_path(),
 						dev->get_description());
 					remove_device(dev);
@@ -623,7 +623,7 @@ void cInputDeviceController::remove_device(class cInputDevice *dev)
 bool cInputDeviceController::add_device(char const *dev_name)
 {
 	class cInputDevice	*dev =
-		new cInputDevice(*this, 
+		new cInputDevice(*this,
 				 cString::sprintf("/dev/input/%s", dev_name));
 	char const		*desc;
 	bool			res;
@@ -704,7 +704,7 @@ void cInputDeviceController::handle_uevent(void)
 	}
 
 	if (rc == sizeof buf - 1u) {
-		esyslog("%s: read(<udev>) received too much data\n", 
+		esyslog("%s: read(<udev>) received too much data\n",
 			plugin_.Name());
 		return;
 	}
@@ -729,7 +729,7 @@ void cInputDeviceController::handle_uevent(void)
 		if (is_all || strcasecmp(dev, "gc") == 0)
 			dump_gc_devices();
 	} else {
-		esyslog("%s: invalid command '%s' for '%s'\n", plugin_name(), 
+		esyslog("%s: invalid command '%s' for '%s'\n", plugin_name(),
 			cmd, dev);
 		return;
 	}
