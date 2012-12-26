@@ -545,14 +545,12 @@ void cInputDeviceController::remove_device(char const *dev_path)
 			dev_path, strerror(errno));
 	} else {
 		cMutexLock	lock(&dev_mutex_);
-		cInputDevice	*i;
 
-		for (i = devices_.First(); i;
-		     i = static_cast<class cInputDevice *>(i->Next())) {
-			if (i->get_dev_path() == dev_path) {
+		for (cInputDevice *i = devices_.First();
+		     i != NULL && dev == NULL;
+		     i = devices_.Next(i)) {
+			if (i->Compare(st.st_rdev) == 0)
 				dev = i;
-				break;
-			}
 		}
 
 		if (dev != NULL) {
@@ -597,10 +595,9 @@ bool cInputDeviceController::add_device(char const *dev_name)
 
 	{
 		cMutexLock	lock(&dev_mutex_);
-		cInputDevice	*i;
 
-		for (i = devices_.First(); i;
-		     i = static_cast<class cInputDevice *>(i->Next())) {
+		for (cInputDevice *i = devices_.First(); i;
+		     i = devices_.Next(i)) {
 			if (dev->Compare(*i) == 0) {
 				dsyslog("%s: device '%s' (%s) already registered\n",
 					plugin_name(), dev_name, desc);
