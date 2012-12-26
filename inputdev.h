@@ -40,6 +40,7 @@ private:
 	void		cleanup_devices(void);
 
 	void		handle_uevent(void);
+	bool		coldplug_devices(char const *);
 
 protected:
 	virtual void	Action(void);
@@ -48,7 +49,7 @@ public:
 	explicit cInputDeviceController(cPlugin &p);
 	virtual ~cInputDeviceController();
 
-	bool		initialize(void);
+	bool		initialize(char const *coldplug_dir);
 	bool		start(void);
 	void		stop(void);
 

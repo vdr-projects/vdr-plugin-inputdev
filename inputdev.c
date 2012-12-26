@@ -570,16 +570,17 @@ void cInputDeviceController::remove_device(class cInputDevice *dev)
 	dev_mutex_.Unlock();
 }
 
-void cInputDeviceController::add_device(char const *dev_name)
+bool cInputDeviceController::add_device(char const *dev_name)
 {
 	class cInputDevice	*dev =
 		new cInputDevice(*this, 
 				 cString::sprintf("/dev/input/%s", dev_name));
 	char const		*desc;
+	bool			res;
 
 	if (!dev->open()) {
 		delete dev;
-		return;
+		return false;
 	}
 
 	desc = dev->get_description();
@@ -606,8 +607,14 @@ void cInputDeviceController::add_device(char const *dev_name)
 		}
 	}
 
-	if (dev != NULL && !dev->start(fd_epoll_))
+	if (dev != NULL && !dev->start(fd_epoll_)) {
+		res = false;
 		remove_device(dev);
+	} else {
+		res = dev != NULL;
+	}
+
+	return res;
 }
 
 void cInputDeviceController::handle_uevent(void)
@@ -653,15 +660,46 @@ void cInputDeviceController::handle_uevent(void)
 	}
 }
 
-bool cInputDeviceController::start(void)
+bool cInputDeviceController::coldplug_devices(char const *path)
 {
-	cThread::Start();
+	cReadDir		cdir(path);
+	bool			res = true;
+
+	for (;;) {
+		struct dirent const	*ent = cdir.Next();
+
+		if (!ent)
+			break;
+
+		if (strcmp(ent->d_name, ".") == 0 ||
+		    strcmp(ent->d_name, "..") == 0)
+			continue;
+
+		if (!add_device(ent->d_name)) {
+			esyslog("%s: failed to coldplug '%s'\n",
+				plugin_name(), ent->d_name);
+			res = false;
+		} else {
+			isyslog("%s: coldplugged '%s'\n",
+				plugin_name(), ent->d_name);
+		}
+	}
+
+	return res;
+}
+
+bool cInputDeviceController::initialize(char const *coldplug_dir)
+{
+	cInputDevice::install_keymap(Name());
+
+	coldplug_devices(coldplug_dir);
+
 	return true;
 }
 
-bool cInputDeviceController::initialize(void)
+bool cInputDeviceController::start(void)
 {
-	cInputDevice::install_keymap(Name());
+	cThread::Start();
 	return true;
 }
 

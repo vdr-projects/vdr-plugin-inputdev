@@ -39,6 +39,8 @@ private:
 		int			idx;
 	}				socket_;
 
+	cString				coldplug_dir;
+
 public:
 	cInputDevicePlugin(void);
 	virtual ~cInputDevicePlugin();
@@ -53,7 +55,7 @@ public:
 };
 
 cInputDevicePlugin::cInputDevicePlugin() :
-	controller_(NULL)
+	controller_(NULL), coldplug_dir("/dev/vdr/input")
 {
 }
 
@@ -134,7 +136,7 @@ bool cInputDevicePlugin::Initialize(void)
 	}
 
 	if (is_ok)
-		is_ok = controller_->initialize();
+		is_ok = controller_->initialize(coldplug_dir);
 
 	if (!is_ok) {
 		delete controller_;
