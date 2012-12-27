@@ -38,6 +38,13 @@ inline static bool test_bit(unsigned int bit, unsigned long const mask[])
 	return (m & (1u << i)) != 0u;
 }
 
+inline static void set_bit(unsigned int bit, unsigned long mask[])
+{
+	unsigned int	i = bit % (sizeof mask[0] * 8);
+
+	mask[bit / (sizeof mask[0] * 8)] |= (1u << i);
+}
+
 class MagicState {
 private:
 	static bool const	IS_SUPPORTED_;
@@ -158,6 +165,14 @@ bool MagicState::process(struct input_event const &ev)
 
 
 class cInputDevice : public cListObject {
+public:
+	enum modifier {
+		modSHIFT,
+		modCONTROL,
+		modALT,
+		modMETA,
+	};
+
 private:
 	cInputDeviceController	&controller_;
 	cString			dev_path_;
@@ -165,6 +180,8 @@ private:
 	int			fd_;
 	dev_t			dev_t_;
 	class MagicState	magic_state_;
+
+	unsigned long		modifiers_;
 
 public:
 	// the vdr list implementation requires knowledge about the containing
@@ -411,6 +428,7 @@ void cInputDevice::handle(void)
 	bool			is_released = false;
 	bool			is_repeated = false;
 	bool			is_valid;
+	bool			is_internal = false;
 
 	rc = read(fd_, &ev, sizeof ev);
 	if (rc < 0 && errno == EINTR)
@@ -456,7 +474,9 @@ void cInputDevice::handle(void)
 	}
 
 	switch (ev.type) {
-	case EV_KEY:
+	case EV_KEY: {
+		unsigned long	mask = 0;
+		
 		is_valid = true;
 
 		switch (ev.value) {
@@ -473,13 +493,53 @@ void cInputDevice::handle(void)
 			break;
 		}
 
-		code = generate_code(0, ev.type, ev.code);
+		switch (ev.code) {
+		case KEY_LEFTSHIFT:
+		case KEY_RIGHTSHIFT:
+			set_bit(modSHIFT, &mask);
+			break;
+
+		case KEY_LEFTCTRL:
+		case KEY_RIGHTCTRL:
+			set_bit(modCONTROL, &mask);
+			break;
+
+		case KEY_LEFTALT:
+		case KEY_RIGHTALT:
+			set_bit(modALT, &mask);
+			break;
+
+		case KEY_LEFTMETA:
+		case KEY_RIGHTMETA:
+			set_bit(modMETA, &mask);
+			break;
+		default:
+			break;
+		}
+
+		if (mask == 0) {
+			code = generate_code(0, ev.type, ev.code);
+		} else if (is_released) {
+			this->modifiers_ &= ~mask;
+			is_internal = true;
+		} else if (is_valid) {
+ 			this->modifiers_ |=  mask;
+			is_internal = true;
+		} else {
+			// repeated events
+			is_internal = true;
+		}
+
 		break;
+	}
 
 	default:
 		is_valid = false;
 		break;
 	}
+
+	if (is_internal)
+		return;
 
 	if (!is_valid) {
 		esyslog("%s: unexpected key events [%02x,%04x,%u]\n",
