@@ -38,6 +38,125 @@ inline static bool test_bit(unsigned int bit, unsigned long const mask[])
 	return (m & (1u << i)) != 0u;
 }
 
+class MagicState {
+private:
+	static bool const	IS_SUPPORTED_;
+
+	unsigned int		state_;
+	struct timespec		next_;
+
+	static int compare(struct timespec const &a,
+			   struct timespec const &b);
+
+	static void add(struct timespec &res,
+			struct timespec const &a,
+			struct timespec const &b);
+
+public:
+	static struct timespec const	TIMEOUT;
+
+	MagicState() : state_(0) {}
+	bool	process(struct input_event const &ev);
+
+};
+
+static bool check_clock_gettime(void)
+{
+	struct timespec		tmp;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &tmp) < 0) {
+		fprintf(stderr,
+			"clock_gettime() not available; magic keysequences will not be available: %s\n",
+			strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
+bool const		MagicState::IS_SUPPORTED_ = check_clock_gettime();
+struct timespec const	MagicState::TIMEOUT = { 1, 500000000 };
+
+int MagicState::compare(struct timespec const &a, struct timespec const &b)
+{
+	if (a.tv_sec < b.tv_sec)
+		return -1;
+	else if (a.tv_sec > b.tv_sec)
+		return + 1;
+	else if (a.tv_nsec < b.tv_nsec)
+		return -1;
+	else if (a.tv_nsec > b.tv_nsec)
+		return +1;
+	else
+		return 0;
+}
+
+void MagicState::add(struct timespec &res,
+		     struct timespec const &a, struct timespec const &b)
+{
+	assert(a.tv_nsec < 1000000000);
+	assert(b.tv_nsec < 1000000000);
+
+	res.tv_sec  = a.tv_sec + b.tv_sec;
+	res.tv_nsec = a.tv_nsec + b.tv_nsec;
+
+	if (res.tv_nsec >= 1000000000) {
+		res.tv_nsec -= 1000000000;
+		res.tv_sec  += 1;
+	}
+}
+
+bool MagicState::process(struct input_event const &ev)
+{
+	static unsigned int const	SEQUENCE[] = {
+		KEY_LEFTSHIFT,
+		KEY_LEFTSHIFT,
+		KEY_ESC,
+		KEY_LEFTSHIFT,
+	};
+
+	unsigned int		code;
+
+	assert(state_ < ARRAY_SIZE(SEQUENCE));
+
+	if (!IS_SUPPORTED_)
+		return false;
+
+	if (ev.type != EV_KEY || ev.value != 1)
+		// ignore non-key events and skip release- and repeat events
+		return false;
+
+	// translate some keys
+	switch (ev.code) {
+	case KEY_RIGHTSHIFT:	code = KEY_LEFTSHIFT; break;
+	default:		code = ev.code;
+	}
+
+	if (state_ > 0) {
+		struct timespec		now;
+
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		if (compare(next_, now) < 0)
+			// reset state due to timeout
+			state_ = 0;
+
+		add(next_, now, TIMEOUT);
+	}
+
+	if (SEQUENCE[state_] == code)
+		++state_;
+	else
+		state_ = 0;
+
+	if (state_ == ARRAY_SIZE(SEQUENCE)) {
+		state_ = 0;
+		return true;
+	}
+
+	return false;
+}
+
+
 class cInputDevice : public cListObject {
 private:
 	cInputDeviceController	&controller_;
@@ -45,6 +164,7 @@ private:
 	cString			description_;
 	int			fd_;
 	dev_t			dev_t_;
+	class MagicState	magic_state_;
 
 public:
 	// the vdr list implementation requires knowledge about the containing
@@ -326,6 +446,13 @@ void cInputDevice::handle(void)
 		(unsigned long)(ev.time.tv_sec),
 		(unsigned int)(ev.time.tv_usec),
 		ev.type, ev.code, ev.value);
+
+	if (magic_state_.process(ev)) {
+		isyslog("%s: magic keysequence from %s; detaching device\n",
+			controller_.plugin_name(), get_dev_path());
+		controller_.remove_device(this);
+		return;
+	}
 
 	switch (ev.type) {
 	case EV_KEY:
