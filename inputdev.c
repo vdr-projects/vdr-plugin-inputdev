@@ -441,11 +441,12 @@ void cInputDevice::handle(void)
 		// ignore events which are no valid key events
 		return;
 
-	dsyslog("%s: event{%s}=[%lu.%06u, %02x, %04x, %d]\n",
-		controller_.plugin_name(), get_dev_path(),
-		(unsigned long)(ev.time.tv_sec),
-		(unsigned int)(ev.time.tv_usec),
-		ev.type, ev.code, ev.value);
+	if (0)
+		dsyslog("%s: event{%s}=[%lu.%06u, %02x, %04x, %d]\n",
+			controller_.plugin_name(), get_dev_path(),
+			(unsigned long)(ev.time.tv_sec),
+			(unsigned int)(ev.time.tv_usec),
+			ev.type, ev.code, ev.value);
 
 	if (magic_state_.process(ev)) {
 		isyslog("%s: magic keysequence from %s; detaching device\n",
