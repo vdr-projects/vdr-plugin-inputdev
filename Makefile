@@ -3,26 +3,52 @@ VERSION = 0.0.1
 
 ### The C++ compiler and options:
 
-PKG_CONFIG = pkg-config
-SYSTEMD_CFLAGS = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
-SYSTEMD_LIBS   = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
+CXX		?= $(CC)
+TAR		?= tar
+XZ		?= xz
+GZIP		?= gzip
+MSGFMT		?= msgfmt
+MSGMERGE	?= msgmerge
+XGETTEXT	?= xgettext
+PKG_CONFIG	?= pkg-config
 
-SOCKET_PATH = /var/run/vdr/inputdev
+SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
+SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
 
-AM_CFLAGS   = -DSOCKET_PATH=\"${SOCKET_PATH}\"
-AM_CXXFLAGS = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" ${SYSTEMD_CFLAGS}
-AM_CXXFLAGS +=  -D_FORTIFY_SOURCE=2 -Wall -Werror
+TAR_FLAGS	 = --owner root --group root --mode a+rX,go-w
 
-LIBS	    = ${SYSTEMD_LIBS}
+AM_CPPFLAGS	 = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" \
+		   -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
-CXX      ?= g++
-CXXFLAGS ?= -g -O3 -Wall -Werror=overloaded-virtual -Wno-parentheses
+ifneq ($(USE_SYSTEMD),)
+AM_CPPFLAGS	+= -DVDR_USE_SYSTEMD
+AM_CXXFLAGS	+= ${SYSTEMD_CFLAGS}
+LIBS		+= ${SYSTEMD_LIBS}
+endif
+
+plugin_SOURCES = \
+	inputdev.cc \
+	inputdev.h \
+	plugin.cc \
+
+helper_SOURCES = \
+	udevhelper.c
+
+extra_SOURCES = \
+	Makefile \
+	README.txt \
+	contrib/96-vdrkeymap.rules \
+	contrib/hama-mce \
+	contrib/tt6400-ir \
+	contrib/x10-wti
 
 ### The directory environment:
 
 VDRDIR ?= ../../..
 LIBDIR ?= ../../lib
 TMPDIR ?= /tmp
+
+SOCKET_PATH = /var/run/vdr/inputdev
 
 ### Allow user defined options to overwrite defaults:
 
@@ -36,35 +62,49 @@ APIVERSION = $(shell sed -ne '/define APIVERSION/s/^.*"\(.*\)".*$$/\1/p' $(VDRDI
 ### The name of the distribution archive:
 
 ARCHIVE = $(PLUGIN)-$(VERSION)
-PACKAGE = vdr-$(ARCHIVE)
-
-### Includes and Defines (add further entries here):
-
-INCLUDES += -I$(VDRDIR)/include
-
-DEFINES += -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+PACKAGE = vdr-$(ARCHIVE).tar
 
 ### The object files (add further files here):
 
-OBJS = plugin.o inputdev.o
+_all_sources = $(plugin_SOURCES) $(helper_SOURCES) $(extra_SOURCES)
+
+_objects = \
+  $(patsubst %.c,%.o,$(filter %.c,$(plugin_SOURCES))) \
+  $(patsubst %.cc,%.o,$(filter %.cc,$(plugin_SOURCES)))
+
+plugin_OBJS = $(call _objects,$(plugin_SOURCES))
+helper_OBJS = $(call _objects,$(helper_SOURCES))
+
+OBJS = $(plugin_OBJS) $(helper_OBJS)
 
 ### The main target:
 
 all: libvdr-$(PLUGIN).so vdr-inputdev i18n
 
 ### Implicit rules:
+_buildflags = $(foreach k,CPP $1 LD, $(AM_$kFLAGS) $($kFLAGS) $($kFLAGS_$@))
 
 %.o: %.c
-	$(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) -c $(DEFINES) $(INCLUDES) $<
+	$(CC) $(call _buildflags,C) -MMD -MP -c $< -o $@
 
-### Dependencies:
+%.o: %.cc
+	$(CC) $(call _buildflags,CXX) -MMD -MP -c $< -o $@
 
-MAKEDEP = $(CXX) -MM -MG
-DEPFILE = .dependencies
-$(DEPFILE): Makefile
-	@$(MAKEDEP) $(DEFINES) $(INCLUDES) $(OBJS:%.o=%.c) > $@
+%.xz:	%
+	@rm -f $@.tmp $@
+	$(XZ) -c < $< >$@.tmp
+	@mv $@.tmp $@
 
--include $(DEPFILE)
+%.gz:	%
+	@rm -f $@.tmp $@
+	$(GZIP) -c < $< >$@.tmp
+	@mv $@.tmp $@
+
+%.mo: %.po
+	$(MSGFMT) -c -o $@ $<
+
+
+-include $(OBJS:%.o=%.d)
 
 ### Internationalization (I18N):
 
@@ -74,14 +114,11 @@ I18Npo    = $(wildcard $(PODIR)/*.po)
 I18Nmsgs  = $(addprefix $(LOCALEDIR)/, $(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo, $(notdir $(foreach file, $(I18Npo), $(basename $(file))))))
 I18Npot   = $(PODIR)/$(PLUGIN).pot
 
-%.mo: %.po
-	msgfmt -c -o $@ $<
-
-$(I18Npot): $(wildcard *.c)
-	xgettext -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ $^
+$(I18Npot): $(wildcard *.c *.cc)
+	$(XGETTEXT) -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ $^
 
 %.po: $(I18Npot)
-	msgmerge -U --no-wrap --no-location --backup=none -q $@ $<
+	$(MSGMERGE) -U --no-wrap --no-location --backup=none -q $@ $<
 	@touch $@
 
 $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
@@ -92,21 +129,20 @@ $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
 i18n: $(I18Nmsgs) $(I18Npot)
 
 ### Targets:
+vdr-inputdev:	$(helper_SOURCES)
+	$(CC) $(call _buildflags,C) $^ -o $@
 
-vdr-inputdev:	udevhelper.c
-	$(CC) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) $^ -o $@
-
-libvdr-$(PLUGIN).so: $(OBJS)
-	$(CXX) $(LDFLAGS) -shared $(OBJS) $(LIBS) -o $@
+libvdr-$(PLUGIN).so: $(plugin_OBJS)
+	$(CXX) $(AM_LDFLAGS) $(LDFLAGS) $(LDFLAGS_$@) -shared -o $@ $^ $(LIBS)
 	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
 
-dist: $(I18Npo) clean
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@mkdir $(TMPDIR)/$(ARCHIVE)
-	@cp -a * $(TMPDIR)/$(ARCHIVE)
-	@tar czf $(PACKAGE).tgz -C $(TMPDIR) $(ARCHIVE)
-	@-rm -rf $(TMPDIR)/$(ARCHIVE)
-	@echo Distribution package created as $(PACKAGE).tgz
+dist:  $(PACKAGE).xz $(PACKAGE).gz
+
+_tar_transform = --transform='s!^!$(ARCHIVE)/!'
+
+$(PACKAGE):	$(I18Npo) $(_all_sources)
+	$(TAR) cf $@ $(TAR_FLAGS) $(_tar_transform) $(sort $^)
 
 clean:
-	@-rm -f $(OBJS) $(DEPFILE) *.so *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
+	@rm -f $(OBJS) libvdr*.so libvdr*.so.* *.d *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
+	@rm -f vdr-inputdev

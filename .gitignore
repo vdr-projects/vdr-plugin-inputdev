@@ -1,4 +1,7 @@
+*.d
 *.o
 *.so
 *.so.1.*
 /.dependencies
+/vdr-inputdev
+/vdr-inputdev-*.tar*
