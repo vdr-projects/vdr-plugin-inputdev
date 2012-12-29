@@ -1,3 +1,6 @@
+#### Requires kernel patches from 
+#### https://github.com/ensc/linux-saa716x/commits/3.6/saa716x-rebase
+
 ## Standard Remote control
 0x160001 power
 0x160018 mute
