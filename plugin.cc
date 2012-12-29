@@ -84,7 +84,15 @@ bool cInputDevicePlugin::ProcessArgs(int argc, char *argv[])
 			break;
 
 		switch (c) {
-		case 'S':  systemd_idx = optarg; break;
+		case 'S':
+#ifdef VDR_USE_SYSTEMD
+			systemd_idx = optarg;
+			break;
+#else
+			esyslog("%s: systemd support has not been compiled in\n",
+				Name());
+			return false;
+#endif
 		case 's':  socket_path = optarg; break;
 		default:
 			esyslog("%s: invalid option\n", Name());
@@ -120,9 +128,11 @@ bool cInputDevicePlugin::Initialize(void)
 	controller_ = new cInputDeviceController(*this);
 
 	switch (socket_type_) {
+#ifdef VDR_USE_SYSTEMD
 	case enSYSTEMD:
 		is_ok = controller_->open_udev_socket(socket_.idx);
 		break;
+#endif
 
 	case enSOCKET:
 		is_ok = controller_->open_udev_socket(socket_.path);

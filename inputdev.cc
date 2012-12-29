@@ -665,6 +665,8 @@ err:
 	return false;
 }
 
+#ifdef VDR_USE_SYSTEMD
+
 #include <systemd/sd-daemon.h>
 bool cInputDeviceController::open_udev_socket(unsigned int systemd_idx)
 {
@@ -684,6 +686,8 @@ bool cInputDeviceController::open_udev_socket(unsigned int systemd_idx)
 
 	return is_valid;
 }
+
+#endif
 
 void cInputDeviceController::cleanup_devices(void)
 {
