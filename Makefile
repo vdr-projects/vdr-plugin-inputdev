@@ -50,7 +50,7 @@ OBJS = plugin.o inputdev.o
 
 ### The main target:
 
-all: libvdr-$(PLUGIN).so i18n
+all: libvdr-$(PLUGIN).so vdr-inputdev i18n
 
 ### Implicit rules:
 
