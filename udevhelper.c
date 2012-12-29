@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
 	char const		*dev;
 	char const		*action = getenv("ACTION");
 	ssize_t			l;
-	bool			is_add;
 
 	if (argc < 2) {
 		fprintf(stderr, "missing device name\n");
