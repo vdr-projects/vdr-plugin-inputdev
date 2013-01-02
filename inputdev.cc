@@ -82,7 +82,7 @@ static bool check_clock_gettime(void)
 }
 
 bool const		MagicState::IS_SUPPORTED_ = check_clock_gettime();
-struct timespec const	MagicState::TIMEOUT = { 1, 500000000 };
+struct timespec const	MagicState::TIMEOUT = { 2, 500000000 };
 
 int MagicState::compare(struct timespec const &a, struct timespec const &b)
 {
