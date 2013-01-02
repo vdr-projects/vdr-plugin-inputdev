@@ -171,6 +171,7 @@ public:
 		modCONTROL,
 		modALT,
 		modMETA,
+		modNUMLOCK,
 	};
 
 private:
@@ -513,6 +514,11 @@ void cInputDevice::handle(void)
 		case KEY_RIGHTMETA:
 			set_bit(modMETA, &mask);
 			break;
+
+		case KEY_NUMLOCK:
+			set_bit(modNUMLOCK, &mask);
+			break;
+
 		default:
 			break;
 		}
