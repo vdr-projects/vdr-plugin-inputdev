@@ -385,6 +385,7 @@ err:
 
 bool cInputDevice::start(int efd)
 {
+	static unsigned int const	ONE = 1;
 	int			rc;
 	struct epoll_event	ev = { };
 	char const		*dev_path = dev_path_;
@@ -392,7 +393,7 @@ bool cInputDevice::start(int efd)
 	ev.events   = EPOLLIN;
 	ev.data.ptr = static_cast<cEpollHandler *>(this);
 
-	rc = ioctl(fd_, EVIOCGRAB, 1);
+	rc = ioctl(fd_, EVIOCGRAB, &ONE);
 	if (rc < 0) {
 		esyslog("%s: ioctl(GRAB, <%s>) failed: %s\n",
 			controller_.plugin_name(), dev_path, strerror(errno));
