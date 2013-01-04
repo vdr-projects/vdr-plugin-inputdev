@@ -180,14 +180,13 @@ private:
 
 	unsigned long		modifiers_;
 
+	cInputDevice(cInputDevice const &);
+	cInputDevice & operator	= (cInputDevice const &);
+
 public:
 	// the vdr list implementation requires knowledge about the containing
 	// list when unlinking a object :(
-	enum {
-		lstNONE,
-		lstDEVICES,
-		lstGC
-	}			container;
+	cList<cInputDevice>	*container;
 
 	cInputDevice(cInputDeviceController &controller,
 		     cString const &dev_path);
@@ -221,7 +220,8 @@ public:
 
 cInputDevice::cInputDevice(cInputDeviceController &controller,
 			   cString const &dev_path) :
-	controller_(controller), dev_path_(dev_path), fd_(-1)
+	controller_(controller), dev_path_(dev_path), fd_(-1),
+	container(NULL)
 {
 }
 
@@ -727,7 +727,7 @@ void cInputDeviceController::cleanup_devices(void)
 	while (gc_devices_.Count() > 0) {
 		class cInputDevice *dev = gc_devices_.First();
 
-		assert(dev->container == cInputDevice::lstGC);
+		assert(dev->container == &gc_devices_);
 		gc_devices_.Del(dev, false);
 
 		dev_mutex_.Unlock();
@@ -807,11 +807,11 @@ void cInputDeviceController::remove_device(char const *dev_path)
 		if (dev != NULL) {
 			dev->stop(fd_epoll_);
 
-			assert(dev->container == cInputDevice::lstDEVICES);
+			assert(dev->container == &devices_);
 			devices_.Del(dev, false);
 
 			gc_devices_.Add(dev);
-			dev->container = cInputDevice::lstGC;
+			dev->container = &gc_devices_;
 		}
 	}
 
@@ -827,19 +827,11 @@ void cInputDeviceController::remove_device(class cInputDevice *dev)
 	dev->stop(fd_epoll_);
 
 	dev_mutex_.Lock();
-	switch (dev->container) {
-	case cInputDevice::lstDEVICES:
-		devices_.Del(dev, false);
-		break;
-	case cInputDevice::lstGC:
-		gc_devices_.Del(dev, false);
-		break;
-	case cInputDevice::lstNONE:
-		break;
-	}
+	if (dev->container)
+		dev->container->Del(dev, false);
 
 	gc_devices_.Add(dev);
-	dev->container = cInputDevice::lstGC;
+	dev->container = &gc_devices_;
 
 	dev_mutex_.Unlock();
 }
@@ -877,7 +869,7 @@ bool cInputDeviceController::add_device(char const *dev_name)
 			isyslog("%s: added input device '%s' (%s)\n",
 				plugin_name(), dev_name, desc);
 			devices_.Add(dev);
-			dev->container = cInputDevice::lstDEVICES;
+			dev->container = &devices_;
 		}
 	}
 
