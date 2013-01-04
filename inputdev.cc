@@ -123,6 +123,7 @@ bool MagicState::process(struct input_event const &ev)
 	};
 
 	unsigned int		code;
+	struct timespec		now;
 
 	assert(state_ < ARRAY_SIZE(SEQUENCE));
 
@@ -139,21 +140,17 @@ bool MagicState::process(struct input_event const &ev)
 	default:		code = ev.code;
 	}
 
-	if (state_ > 0) {
-		struct timespec		now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if (state_ > 0 && compare(next_, now) < 0)
+		// reset state due to timeout
+		state_ = 0;
 
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		if (compare(next_, now) < 0)
-			// reset state due to timeout
-			state_ = 0;
-
+	if (SEQUENCE[state_] != code) {
+		state_ = 0;
+	} else {
+		++state_;
 		add(next_, now, TIMEOUT);
 	}
-
-	if (SEQUENCE[state_] == code)
-		++state_;
-	else
-		state_ = 0;
 
 	if (state_ == ARRAY_SIZE(SEQUENCE)) {
 		state_ = 0;
