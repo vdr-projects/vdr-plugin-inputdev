@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 		return EX_OSERR;
 	}
 
-	if (l != strlen(cmd)) {
+	if ((size_t)l != strlen(cmd)) {
 		fprintf(stderr, "not all data sent\n");
 		return EX_OSERR;
 	}
