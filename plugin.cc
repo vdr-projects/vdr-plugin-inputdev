@@ -41,6 +41,10 @@ private:
 
 	cString				coldplug_dir;
 
+private:
+	cInputDevicePlugin(cInputDevicePlugin const &);
+	operator = (cInputDevicePlugin const &);
+
 public:
 	cInputDevicePlugin(void);
 	virtual ~cInputDevicePlugin();
