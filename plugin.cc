@@ -43,7 +43,7 @@ private:
 
 private:
 	cInputDevicePlugin(cInputDevicePlugin const &);
-	operator = (cInputDevicePlugin const &);
+	cInputDevicePlugin &operator = (cInputDevicePlugin const &);
 
 public:
 	cInputDevicePlugin(void);
