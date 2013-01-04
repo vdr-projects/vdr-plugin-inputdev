@@ -22,6 +22,8 @@
 
 class cEpollHandler {
 public:
+	virtual ~cEpollHandler() {}
+
 	virtual void	handle_hup() = 0;
 	virtual void	handle_pollin() = 0;
 };

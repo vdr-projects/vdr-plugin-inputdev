@@ -390,7 +390,7 @@ bool cInputDevice::start(int efd)
 	char const		*dev_path = dev_path_;
 
 	ev.events   = EPOLLIN;
-	ev.data.ptr = this;
+	ev.data.ptr = static_cast<cEpollHandler *>(this);
 
 	rc = ioctl(fd_, EVIOCGRAB, 1);
 	if (rc < 0) {
@@ -625,7 +625,7 @@ bool cInputDeviceController::open_generic(int fd_udev)
 	}
 
 	ev.events = EPOLLIN;
-	ev.data.ptr = this;
+	ev.data.ptr = static_cast<cEpollHandler *>(this);
 
 	rc = epoll_ctl(fd_epoll, EPOLL_CTL_ADD, fd_udev, &ev);
 	if (rc < 0) {
@@ -640,6 +640,7 @@ bool cInputDeviceController::open_generic(int fd_udev)
 		goto err;
 	}
 
+	ev.data.ptr = NULL;
 	rc = epoll_ctl(fd_epoll, EPOLL_CTL_ADD, fd_alive_[0], &ev);
 	if (rc < 0) {
 		esyslog("%s: epoll_ctl(ADD, <alive#%d>) failed: %s\n",
@@ -769,10 +770,16 @@ void cInputDeviceController::Action(void)
 			class cEpollHandler	*dev =
 				static_cast<class cEpollHandler *>(events[i].data.ptr);
 
-			if ((ev & (EPOLLHUP|EPOLLIN)) == EPOLLHUP)
+			if (!dev)
+				esyslog("%s: internal error; got event from keep-alive pipe\n",
+					plugin_.Name());
+			else if ((ev & (EPOLLHUP|EPOLLIN)) == EPOLLHUP)
 				dev->handle_hup();
-			else
+			else if (ev & EPOLLIN)
 				dev->handle_pollin();
+			else
+				esyslog("%s: unexpected event %04x@%p\n",
+					plugin_.Name(), ev, dev);
 		}
 
 		cleanup_devices();
