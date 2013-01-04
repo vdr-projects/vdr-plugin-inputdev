@@ -20,6 +20,11 @@ TAR_FLAGS	 = --owner root --group root --mode a+rX,go-w
 AM_CPPFLAGS	 = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" \
 		   -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
 
+WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wextra
+
+AM_CXXFLAGS	+= $(WARN_OPTS)
+AM_CFLAGS	+= $(WARN_OPTS)
+
 ifneq ($(USE_SYSTEMD),)
 AM_CPPFLAGS	+= -DVDR_USE_SYSTEMD
 AM_CXXFLAGS	+= ${SYSTEMD_CFLAGS}
