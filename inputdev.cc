@@ -160,8 +160,7 @@ bool MagicState::process(struct input_event const &ev)
 	return false;
 }
 
-
-class cInputDevice : public cListObject {
+class cInputDevice : public cListObject, public cEpollHandler {
 public:
 	enum modifier {
 		modSHIFT,
@@ -202,7 +201,9 @@ public:
 		return this->dev_t_ - b;
 	}
 
-	void		handle(void);
+	virtual void	handle_hup();
+	virtual void	handle_pollin();
+
 	bool		open(void);
 	bool		start(int efd);
 	void		stop(int efd);
@@ -417,7 +418,14 @@ void cInputDevice::stop(int efd)
 	epoll_ctl(efd, EPOLL_CTL_DEL, fd_, NULL);
 }
 
-void cInputDevice::handle(void)
+void cInputDevice::handle_hup(void)
+{
+	isyslog("%s: device '%s' (%s) hung up\n", controller_.plugin_name(),
+		get_dev_path(), get_description());
+	controller_.remove_device(this);
+}
+
+void cInputDevice::handle_pollin(void)
 {
 	struct input_event	ev;
 	ssize_t			rc;
@@ -617,7 +625,7 @@ bool cInputDeviceController::open_generic(int fd_udev)
 	}
 
 	ev.events = EPOLLIN;
-	ev.data.ptr = NULL;
+	ev.data.ptr = this;
 
 	rc = epoll_ctl(fd_epoll, EPOLL_CTL_ADD, fd_udev, &ev);
 	if (rc < 0) {
@@ -728,6 +736,13 @@ void cInputDeviceController::cleanup_devices(void)
 	dev_mutex_.Unlock();
 }
 
+void cInputDeviceController::handle_hup(void)
+{
+	esyslog("%s: uevent socket hung up; stopping plugin\n",
+		plugin_name());
+	this->Cancel(-1);
+}
+
 void cInputDeviceController::Action(void)
 {
 	while (Running()) {
@@ -751,26 +766,13 @@ void cInputDeviceController::Action(void)
 
 		for (i = 0; i < (size_t)(rc); ++i) {
 			unsigned int		ev = events[i].events;
-			class cInputDevice	*dev =
-				static_cast<class cInputDevice *>(events[i].data.ptr);
+			class cEpollHandler	*dev =
+				static_cast<class cEpollHandler *>(events[i].data.ptr);
 
-			if ((ev & (EPOLLHUP|EPOLLIN)) == EPOLLHUP) {
-				if (dev == NULL) {
-					esyslog("%s: uevent socket hung up; stopping plugin\n",
-						plugin_name());
-					this->Cancel(-1);
-				} else {
-					isyslog("%s: device '%s' (%s) hung up\n",
-						plugin_name(),
-						dev->get_dev_path(),
-						dev->get_description());
-					remove_device(dev);
-				}
-			} else if (dev == NULL) {
-				handle_uevent();
-			} else {
-				dev->handle();
-			}
+			if ((ev & (EPOLLHUP|EPOLLIN)) == EPOLLHUP)
+				dev->handle_hup();
+			else
+				dev->handle_pollin();
 		}
 
 		cleanup_devices();
@@ -900,7 +902,7 @@ void cInputDeviceController::dump_gc_devices(void)
 		i->dump();
 }
 
-void cInputDeviceController::handle_uevent(void)
+void cInputDeviceController::handle_pollin(void)
 {
 	char		buf[128];
 	char		cmd[sizeof buf];

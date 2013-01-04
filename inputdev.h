@@ -20,10 +20,16 @@
 #include <vdr/remote.h>
 #include <vdr/thread.h>
 
-class cPlugin;
+class cEpollHandler {
+public:
+	virtual void	handle_hup() = 0;
+	virtual void	handle_pollin() = 0;
+};
 
+class cPlugin;
 class cInputDevice;
-class cInputDeviceController : protected cRemote, protected cThread
+class cInputDeviceController : protected cRemote, protected cThread,
+			       protected cEpollHandler
 {
 private:
 	cPlugin			&plugin_;
@@ -40,7 +46,6 @@ private:
 	bool		open_generic(int fd_udev);
 	void		cleanup_devices(void);
 
-	void		handle_uevent(void);
 	bool		coldplug_devices(char const *);
 
 	void		dump_active_devices();
@@ -48,6 +53,9 @@ private:
 
 protected:
 	virtual void	Action(void);
+
+	virtual void	handle_hup();
+	virtual void	handle_pollin();
 
 public:
 	explicit cInputDeviceController(cPlugin &p);
