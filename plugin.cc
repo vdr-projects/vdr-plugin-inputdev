@@ -168,6 +168,8 @@ bool cInputDevicePlugin::Start(void)
 void cInputDevicePlugin::Stop(void)
 {
 	controller_->stop();
+	delete controller_;
+	controller_ = NULL;
 }
 
 VDRPLUGINCREATOR(cInputDevicePlugin); // Don't touch this!
