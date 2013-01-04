@@ -29,6 +29,7 @@ private:
 	cPlugin			&plugin_;
 	int			fd_udev_;
 	int			fd_epoll_;
+	int			fd_alive_[2];
 	cList<cInputDevice>	devices_;
 	cList<cInputDevice>	gc_devices_;
 

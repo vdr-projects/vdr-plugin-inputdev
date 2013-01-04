@@ -565,11 +565,16 @@ void cInputDevice::handle(void)
 cInputDeviceController::cInputDeviceController(cPlugin &p)
 	: cRemote("inputdev"), plugin_(p), fd_udev_(-1), fd_epoll_(-1)
 {
+	fd_alive_[0] = -1;
+	fd_alive_[1] = -1;
+
 	SetDescription("inpudev handler");
 }
 
 cInputDeviceController::~cInputDeviceController(void)
 {
+	this->close(fd_alive_[0]);
+	this->close(fd_alive_[1]);
 	this->close(fd_udev_);
 	this->close(fd_epoll_);
 }
@@ -621,6 +626,19 @@ bool cInputDeviceController::open_generic(int fd_udev)
 	if (rc < 0) {
 		esyslog("%s: epoll_ctl(ADD, <udev>) failed: %s\n",
 			plugin_.Name(), strerror(errno));
+		goto err;
+	}
+
+	rc = pipe2(fd_alive_, O_CLOEXEC);
+	if (rc < 0) {
+		esyslog("%s: pipe2(): %s\n", plugin_.Name(), strerror(errno));
+		goto err;
+	}
+
+	rc = epoll_ctl(fd_epoll, EPOLL_CTL_ADD, fd_alive_[0], &ev);
+	if (rc < 0) {
+		esyslog("%s: epoll_ctl(ADD, <alive#%d>) failed: %s\n",
+			plugin_.Name(), fd_alive_[0], strerror(errno));
 		goto err;
 	}
 
@@ -981,6 +999,9 @@ bool cInputDeviceController::start(void)
 void cInputDeviceController::stop(void)
 {
 	Cancel(-1);
+
 	this->close(fd_epoll_);
+	this->close(fd_alive_[1]);
+
 	Cancel(5);
 }
