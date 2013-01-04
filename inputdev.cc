@@ -655,6 +655,8 @@ bool cInputDeviceController::open_generic(int fd_udev)
 	return true;
 
 err:
+	this->close(fd_alive_[0]);
+	this->close(fd_alive_[1]);
 	this->close(fd_epoll);
 	return false;
 }
