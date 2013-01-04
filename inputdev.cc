@@ -580,10 +580,12 @@ char const *cInputDeviceController::plugin_name(void) const
 	return plugin_.Name();
 }
 
-void cInputDeviceController::close(int fd)
+void cInputDeviceController::close(int &fd)
 {
-	if (fd != -1)
+	if (fd != -1) {
 		::close(fd);
+		fd = -1;
+	}
 }
 
 bool cInputDeviceController::open_generic(int fd_udev)
@@ -980,6 +982,5 @@ void cInputDeviceController::stop(void)
 {
 	Cancel(-1);
 	this->close(fd_epoll_);
-	fd_epoll_ = -1;
 	Cancel(5);
 }

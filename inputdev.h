@@ -65,7 +65,7 @@ public:
 	void		remove_device(char const *dev);
 	void		remove_device(class cInputDevice *dev);
 
-	static void	close(int fd);
+	static void	close(int &fd);
 
 	bool	Put(uint64_t Code, bool Repeat, bool Release) {
 		return cRemote::Put(Code, Repeat, Release);
