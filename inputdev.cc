@@ -568,7 +568,7 @@ cInputDeviceController::cInputDeviceController(cPlugin &p)
 	fd_alive_[0] = -1;
 	fd_alive_[1] = -1;
 
-	SetDescription("inpudev handler");
+	SetDescription("inputdev handler");
 }
 
 cInputDeviceController::~cInputDeviceController(void)
