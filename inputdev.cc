@@ -195,7 +195,7 @@ public:
 
 	cInputDevice(cInputDeviceController &controller,
 		     cString const &dev_path);
-	~cInputDevice();
+	virtual ~cInputDevice();
 
 	virtual int Compare(cInputDevice const &b) const {
 		return this->dev_t_ - b.dev_t_;
@@ -981,4 +981,5 @@ void cInputDeviceController::stop(void)
 	Cancel(-1);
 	this->close(fd_epoll_);
 	fd_epoll_ = -1;
+	Cancel(5);
 }
