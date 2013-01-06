@@ -91,7 +91,7 @@ OBJS = $(plugin_OBJS) $(helper_OBJS)
 
 ### The main target:
 
-all: libvdr-$(PLUGIN).so vdr-inputdev i18n
+all: libvdr-$(PLUGIN).so.$(APIVERSION) vdr-inputdev i18n
 
 ### Implicit rules:
 _buildflags = $(foreach k,CPP $1 LD, $(AM_$kFLAGS) $($kFLAGS) $($kFLAGS_$@))
@@ -143,9 +143,8 @@ i18n: $(I18Nmsgs) $(I18Npot)
 vdr-inputdev:	$(helper_SOURCES)
 	$(CC) $(call _buildflags,C) $^ -o $@
 
-libvdr-$(PLUGIN).so: $(plugin_OBJS)
+libvdr-$(PLUGIN).so.$(APIVERSION): $(plugin_OBJS)
 	$(CXX) $(AM_LDFLAGS) $(LDFLAGS) $(LDFLAGS_$@) -shared -o $@ $^ $(LIBS)
-	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
 
 _packages = $(addprefix $(PACKAGE),.xz .gz)
 
