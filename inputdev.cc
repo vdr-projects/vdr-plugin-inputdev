@@ -617,7 +617,7 @@ bool cInputDevice::set_repeat_rate(unsigned int delay_ms,
 
 cInputDeviceController::cInputDeviceController(cPlugin &p)
 	: cRemote("inputdev"), plugin_(p), fd_udev_(-1), fd_epoll_(-1),
-	  repeat_delay_ms_(500), repeat_rate_ms_(1000)
+	  repeat_delay_ms_(250), repeat_rate_ms_(100)
 {
 	fd_alive_[0] = -1;
 	fd_alive_[1] = -1;
