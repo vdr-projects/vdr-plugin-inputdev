@@ -6,6 +6,7 @@ VERSION = 0.0.1
 CXX		?= $(CC)
 TAR		?= tar
 XZ		?= xz
+GPG		?= gpg
 GZIP		?= gzip
 MSGFMT		?= msgfmt
 MSGMERGE	?= msgmerge
@@ -141,12 +142,17 @@ libvdr-$(PLUGIN).so: $(plugin_OBJS)
 	$(CXX) $(AM_LDFLAGS) $(LDFLAGS) $(LDFLAGS_$@) -shared -o $@ $^ $(LIBS)
 	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
 
-dist:  $(PACKAGE).xz $(PACKAGE).gz
+_packages = $(addprefix $(PACKAGE),.xz .gz)
+
+dist:  $(_packages) $(addsuffix .asc,$(_packages))
 
 _tar_transform = --transform='s!^!$(ARCHIVE)/!'
 
 $(PACKAGE):	$(I18Npo) $(_all_sources)
 	$(TAR) cf $@ $(TAR_FLAGS) $(_tar_transform) $(sort $^)
+
+%.asc:		%
+	$(GPG) --detach-sign --armor --output $@ $<
 
 clean:
 	@rm -f $(OBJS) libvdr*.so libvdr*.so.* *.d *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
