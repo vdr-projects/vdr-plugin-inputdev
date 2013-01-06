@@ -13,6 +13,9 @@ MSGMERGE	?= msgmerge
 XGETTEXT	?= xgettext
 PKG_CONFIG	?= pkg-config
 
+INSTALL		?= install
+INSTALL_DATA	?= $(INSTALL) -p -m 0644
+
 SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
 SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
 
@@ -128,8 +131,7 @@ $(I18Npot): $(wildcard *.c *.cc)
 	@touch $@
 
 $(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
-	@mkdir -p $(dir $@)
-	cp $< $@
+	$(INSTALL_DATA) -D $< $@
 
 .PHONY: i18n
 i18n: $(I18Nmsgs) $(I18Npot)
