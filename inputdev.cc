@@ -221,7 +221,7 @@ public:
 cInputDevice::cInputDevice(cInputDeviceController &controller,
 			   cString const &dev_path) :
 	controller_(controller), dev_path_(dev_path), fd_(-1), dev_t_(0),
-	container(NULL)
+	modifiers_(0), container(NULL)
 {
 }
 
