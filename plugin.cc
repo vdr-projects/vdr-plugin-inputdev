@@ -23,7 +23,7 @@
 
 static char const *DEFAULT_SOCKET_PATH = SOCKET_PATH;
 static const char *VERSION        = PACKAGE_VERSION;
-static const char *DESCRIPTION    = "Linux input device  plugin";
+static const char *DESCRIPTION    = "Linux input device plugin";
 
 class cInputDevicePlugin : public cPlugin {
 private:
