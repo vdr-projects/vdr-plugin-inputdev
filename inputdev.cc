@@ -827,16 +827,15 @@ void cInputDeviceController::remove_device(char const *dev_path)
 
 void cInputDeviceController::remove_device(class cInputDevice *dev)
 {
+	cMutexLock		lock(&dev_mutex_);
+
 	dev->stop(fd_epoll_);
 
-	dev_mutex_.Lock();
 	if (dev->container)
 		dev->container->Del(dev, false);
 
 	gc_devices_.Add(dev);
 	dev->container = &gc_devices_;
-
-	dev_mutex_.Unlock();
 }
 
 bool cInputDeviceController::add_device(char const *dev_name)
@@ -854,26 +853,23 @@ bool cInputDeviceController::add_device(char const *dev_name)
 
 	desc = dev->get_description();
 
-	{
-		cMutexLock	lock(&dev_mutex_);
+	cMutexLock		lock(&dev_mutex_);
 
-		for (cInputDevice *i = devices_.First(); i;
-		     i = devices_.Next(i)) {
-			if (dev->Compare(*i) == 0) {
-				dsyslog("%s: device '%s' (%s) already registered\n",
-					plugin_name(), dev_name, desc);
-				delete dev;
-				dev = NULL;
-				break;
-			}
-		}
-
-		if (dev != NULL) {
-			isyslog("%s: added input device '%s' (%s)\n",
+	for (cInputDevice *i = devices_.First(); i; i = devices_.Next(i)) {
+		if (dev->Compare(*i) == 0) {
+			dsyslog("%s: device '%s' (%s) already registered\n",
 				plugin_name(), dev_name, desc);
-			devices_.Add(dev);
-			dev->container = &devices_;
+			delete dev;
+			dev = NULL;
+			break;
 		}
+	}
+
+	if (dev != NULL) {
+		isyslog("%s: added input device '%s' (%s)\n",
+			plugin_name(), dev_name, desc);
+		devices_.Add(dev);
+		dev->container = &devices_;
 	}
 
 	if (dev != NULL && !dev->start(fd_epoll_)) {
