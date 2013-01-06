@@ -179,9 +179,14 @@ private:
 	class MagicState	magic_state_;
 
 	unsigned long		modifiers_;
+	unsigned int		orig_rate_[2];
 
 	cInputDevice(cInputDevice const &);
 	cInputDevice & operator	= (cInputDevice const &);
+
+	bool			has_orig_repeate_rate(void) const {
+		return orig_rate_[0] != 0 && orig_rate_[1] != 0;
+	}
 
 public:
 	// the vdr list implementation requires knowledge about the containing
@@ -210,6 +215,9 @@ public:
 	char const	*get_description(void) const { return description_; }
 	char const	*get_dev_path(void) const { return dev_path_; }
 
+	bool		set_repeat_rate(unsigned int delay_ms,
+					unsigned int rate_ms);
+
 	void		dump(void) const;
 
 	static uint64_t	generate_code(uint16_t type, uint16_t code,
@@ -223,6 +231,8 @@ cInputDevice::cInputDevice(cInputDeviceController &controller,
 	controller_(controller), dev_path_(dev_path), fd_(-1), dev_t_(0),
 	modifiers_(0), container(NULL)
 {
+	orig_rate_[0] = 0;
+	orig_rate_[1] = 0;
 }
 
 cInputDevice::~cInputDevice()
@@ -400,6 +410,14 @@ bool cInputDevice::start(int efd)
 		goto err;
 	}
 
+	rc = ioctl(fd_, EVIOCGREP, orig_rate_);
+	if (rc < 0) {
+		isyslog("%s: %s does not support setup of repeat rate\n",
+			controller_.plugin_name(), dev_path);
+		orig_rate_[0] = 0;
+		orig_rate_[1] = 0;
+	}
+
 	rc = epoll_ctl(efd, EPOLL_CTL_ADD, fd_, &ev);
 	if (rc < 0) {
 		esyslog("%s: epoll_ctl(ADD, <%s>) failed: %s\n",
@@ -415,6 +433,12 @@ err:
 
 void cInputDevice::stop(int efd)
 {
+	// ignore errors here; there is not very much which can be done in
+	// this situation.  Errors will also happen when devices disconnects
+	// and fd_ refers to a non existing device then.
+	if (orig_rate_[0] != 0 && orig_rate_[1] != 0)
+		ioctl(fd_, EVIOCSREP, orig_rate_);
+
 	ioctl(fd_, EVIOCGRAB, 0);
 	epoll_ctl(efd, EPOLL_CTL_DEL, fd_, NULL);
 }
@@ -566,10 +590,34 @@ void cInputDevice::handle_pollin(void)
 	}
 }
 
+bool cInputDevice::set_repeat_rate(unsigned int delay_ms,
+				   unsigned int rate_ms)
+{
+	unsigned int	rep[2] = { delay_ms, rate_ms };
+	int		rc;
+
+	if (!has_orig_repeate_rate()) {
+		dsyslog("%s: %s skipping setup of repeat rate because original one is unknown\n",
+			controller_.plugin_name(), get_dev_path());
+		return true;		// no error
+	}
+
+	rc = ioctl(fd_, EVIOCSREP, rep);
+	if (rc < 0) {
+		esyslog("%s: %s failed to set repeat rate: %s\n",
+			controller_.plugin_name(), get_dev_path(),
+			strerror(errno));
+		return false;
+	}
+
+	return true;
+}
+
 // ===========================
 
 cInputDeviceController::cInputDeviceController(cPlugin &p)
-	: cRemote("inputdev"), plugin_(p), fd_udev_(-1), fd_epoll_(-1)
+	: cRemote("inputdev"), plugin_(p), fd_udev_(-1), fd_epoll_(-1),
+	  repeat_delay_ms_(500), repeat_rate_ms_(1000)
 {
 	fd_alive_[0] = -1;
 	fd_alive_[1] = -1;
@@ -872,15 +920,42 @@ bool cInputDeviceController::add_device(char const *dev_name)
 		dev->container = &devices_;
 	}
 
-	if (dev != NULL && !dev->start(fd_epoll_)) {
+	if (dev == NULL) {
+		res = false;
+	} else if (!dev->start(fd_epoll_)) {
 		res = false;
 		remove_device(dev);
 	} else {
-		res = dev != NULL;
+		dev->set_repeat_rate(repeat_delay_ms_, repeat_rate_ms_);
+		res = true;
 	}
 
 	return res;
 }
+
+bool cInputDeviceController::set_repeat_rate(unsigned int delay_ms,
+					     unsigned int rate_ms)
+{
+	bool		success = true;
+
+	cMutexLock	lock(&dev_mutex_);
+	for (cInputDevice *i = devices_.First(); i; i = devices_.Next(i))
+		success &= i->set_repeat_rate(delay_ms, rate_ms);
+
+	if (!success) {
+		esyslog("%s: failed to set repeat parameters [%u, %u]\n",
+			plugin_name(), delay_ms, rate_ms);
+		// \todo: rewind already done setup?
+	} else {
+		isyslog("%s: set repeat parameters  [%u, %u]\n",
+			plugin_name(), delay_ms, rate_ms);
+		repeat_delay_ms_ = delay_ms;
+		repeat_rate_ms_  = rate_ms;
+	}
+
+	return success;
+}
+
 
 void cInputDeviceController::dump_active_devices(void)
 {

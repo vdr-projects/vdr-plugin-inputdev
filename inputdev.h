@@ -43,6 +43,9 @@ private:
 
 	cMutex			dev_mutex_;
 
+	unsigned int		repeat_delay_ms_;
+	unsigned int		repeat_rate_ms_;
+
 	cInputDeviceController(cInputDeviceController const &);
 
 	bool		open_generic(int fd_udev);
@@ -75,6 +78,9 @@ public:
 	bool		add_device(char const *dev);
 	void		remove_device(char const *dev);
 	void		remove_device(class cInputDevice *dev);
+
+	bool		set_repeat_rate(unsigned int delay_ms,
+					unsigned int rate_ms);
 
 	static void	close(int &fd);
 
