@@ -44,6 +44,9 @@ helper_SOURCES = \
 	udevhelper.c
 
 extra_SOURCES = \
+	COPYING \
+	COPYING.gpl-2 \
+	COPYING.gpl-3 \
 	Makefile \
 	README.txt \
 	contrib/96-vdrkeymap.rules \
