@@ -64,7 +64,7 @@ SOCKET_PATH = /var/run/vdr/inputdev
 
 ### Allow user defined options to overwrite defaults:
 
-include $(VDRDIR)/Make.global
+-include $(VDRDIR)/Make.global
 -include $(VDRDIR)/Make.config
 
 ### The version number of VDR's plugin API (taken from VDR's "config.h"):
