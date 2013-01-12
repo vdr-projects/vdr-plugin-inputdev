@@ -5,3 +5,5 @@
 /.dependencies
 /vdr-inputdev
 /vdr-inputdev-*.tar*
+/po/*.mo
+/po/inputdev.pot
