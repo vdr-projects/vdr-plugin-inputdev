@@ -23,7 +23,7 @@
 
 static char const *DEFAULT_SOCKET_PATH = SOCKET_PATH;
 static const char *VERSION        = PACKAGE_VERSION;
-static const char *DESCRIPTION    = "Linux input device plugin";
+static const char *DESCRIPTION    = trNOOP("Linux input device plugin");
 
 class cInputDevicePlugin : public cPlugin {
 private:
@@ -50,7 +50,7 @@ public:
 	virtual ~cInputDevicePlugin();
 
 	virtual const char *Version(void) { return VERSION; }
-	virtual const char *Description(void) { return DESCRIPTION; }
+	virtual const char *Description(void) { return tr(DESCRIPTION); }
 
 	virtual bool	ProcessArgs(int argc, char *argv[]);
 	virtual bool	Initialize(void);
