@@ -1,40 +1,6 @@
 PLUGIN  = inputdev
 VERSION = 0.0.1
 
-### The C++ compiler and options:
-
-CXX		?= $(CC)
-TAR		?= tar
-XZ		?= xz
-GPG		?= gpg
-GZIP		?= gzip
-MSGFMT		?= msgfmt
-MSGMERGE	?= msgmerge
-XGETTEXT	?= xgettext
-PKG_CONFIG	?= pkg-config
-
-INSTALL		?= install
-INSTALL_DATA	?= $(INSTALL) -p -m 0644
-
-SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
-SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
-
-TAR_FLAGS	 = --owner root --group root --mode a+rX,go-w
-
-AM_CPPFLAGS	 = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" \
-		   -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
-
-WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wextra
-
-AM_CXXFLAGS	+= $(WARN_OPTS)
-AM_CFLAGS	+= $(WARN_OPTS)
-
-ifneq ($(USE_SYSTEMD),)
-AM_CPPFLAGS	+= -DVDR_USE_SYSTEMD
-AM_CXXFLAGS	+= ${SYSTEMD_CFLAGS}
-LIBS		+= ${SYSTEMD_LIBS}
-endif
-
 plugin_SOURCES = \
 	inputdev.cc \
 	inputdev.h \
@@ -53,6 +19,59 @@ extra_SOURCES = \
 	contrib/hama-mce \
 	contrib/tt6400-ir \
 	contrib/x10-wti
+
+LINGUAS	= de
+
+### The C++ compiler and options:
+
+CXX		?= $(CC)
+TAR		?= tar
+XZ		?= xz
+GPG		?= gpg
+GZIP		?= gzip
+MSGFMT		?= msgfmt
+MSGMERGE	?= msgmerge
+XGETTEXT	?= xgettext
+PKG_CONFIG	?= pkg-config
+
+INSTALL		?= install
+INSTALL_DATA	?= $(INSTALL) -p -m 0644
+INSTALL_PLUGIN	?= $(INSTALL) -p -m 0755
+INSTALL_BIN	?= $(INSTALL) -p -m 0755
+MKDIR_P		?= $(INSTALL) -d -m 0755
+
+SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
+SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
+
+TAR_FLAGS	 = --owner root --group root --mode a+rX,go-w
+
+AM_CPPFLAGS	 = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" \
+		   -D_GNU_SOURCE -DPLUGIN_NAME_I18N='"$(PLUGIN)"'
+
+AM_MSGMERGEFLAGS =  -U --force-po --no-wrap --no-location --backup=none -q
+
+AM_XGETTEXTFLAGS = -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP \
+		   --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) \
+		   --msgid-bugs-address='<see README>'
+
+WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wextra
+
+AM_CXXFLAGS	+= $(WARN_OPTS)
+AM_CFLAGS	+= $(WARN_OPTS)
+
+ifneq ($(USE_SYSTEMD),)
+  AM_CPPFLAGS	+= -DVDR_USE_SYSTEMD
+  AM_CXXFLAGS	+= ${SYSTEMD_CFLAGS}
+  LIBS		+= ${SYSTEMD_LIBS}
+endif
+
+prefix		 = /usr/local
+datadir		 = $(prefix)/share
+plugindir	 = $(patsubst $(DESTDIR)/%,/%,$(PLUGINLIBDIR))
+udevdir		 = $(prefix)/lib/udev
+localedir	 = $(datadir)/locale
+
+vdr_PLUGINS	 = libvdr-$(PLUGIN).so.$(APIVERSION)
 
 ### The directory environment:
 
@@ -91,7 +110,7 @@ OBJS = $(plugin_OBJS) $(helper_OBJS)
 
 ### The main target:
 
-all: libvdr-$(PLUGIN).so.$(APIVERSION) vdr-inputdev i18n
+all: $(vdr_PLUGINS) vdr-inputdev i18n
 
 ### Implicit rules:
 _buildflags = $(foreach k,CPP $1 LD, $(AM_$kFLAGS) $($kFLAGS) $($kFLAGS_$@))
@@ -112,7 +131,7 @@ _buildflags = $(foreach k,CPP $1 LD, $(AM_$kFLAGS) $($kFLAGS) $($kFLAGS_$@))
 	$(GZIP) -c < $< >$@.tmp
 	@mv $@.tmp $@
 
-%.mo: %.po
+po/%.mo:	po/%.po
 	$(MSGFMT) -c -o $@ $<
 
 
@@ -120,30 +139,30 @@ _buildflags = $(foreach k,CPP $1 LD, $(AM_$kFLAGS) $($kFLAGS) $($kFLAGS_$@))
 
 ### Internationalization (I18N):
 
-PODIR     = po
-LOCALEDIR = $(VDRDIR)/locale
-I18Npo    = $(wildcard $(PODIR)/*.po)
-I18Nmsgs  = $(addprefix $(LOCALEDIR)/, $(addsuffix /LC_MESSAGES/vdr-$(PLUGIN).mo, $(notdir $(foreach file, $(I18Npo), $(basename $(file))))))
-I18Npot   = $(PODIR)/$(PLUGIN).pot
+POTFILE   = po/$(PLUGIN).pot
 
-$(I18Npot): $(wildcard *.c *.cc)
-	$(XGETTEXT) -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) --msgid-bugs-address='<see README>' -o $@ $^
+_po_files = $(addsuffix .po,$(addprefix po/,$(LINGUAS)))
+_mo_files = $(_po_files:%.po=%.mo)
+_full_mo_path = $(DESTDIR)$(localedir)/$1/LC_MESSAGES/vdr-$(PLUGIN).mo
+_all_inst_mo  = $(foreach l,$(LINGUAS),$(call _full_mo_path,$l))
 
-%.po: $(I18Npot)
-	$(MSGMERGE) -U --no-wrap --no-location --backup=none -q $@ $<
-	@touch $@
+$(_all_inst_mo):$(call _full_mo_path,%):	po/%.mo
+	$(MKDIR_P) ${@D}
+	$(INSTALL_DATA) $< $@
 
-$(I18Nmsgs): $(LOCALEDIR)/%/LC_MESSAGES/vdr-$(PLUGIN).mo: $(PODIR)/%.mo
-	$(INSTALL_DATA) -D $< $@
+install-i18n:	$(_all_inst_mo)
 
-.PHONY: i18n
-i18n: $(I18Nmsgs) $(I18Npot)
+%.po:	$(POTFILE)
+	$(MSGMERGE) $(AM_MSGMERGEFLAGS) $@ $<
+
+$(POTFILE):	$(plugin_SOURCES)
+	$(XGETTEXT) $(AM_XGETTEXTFLAGS) -o $@ $^
 
 ### Targets:
 vdr-inputdev:	$(helper_SOURCES)
 	$(CC) $(call _buildflags,C) $^ -o $@
 
-libvdr-$(PLUGIN).so.$(APIVERSION): $(plugin_OBJS)
+$(vdr_PLUGINS): $(plugin_OBJS)
 	$(CXX) $(AM_LDFLAGS) $(LDFLAGS) $(LDFLAGS_$@) -shared -o $@ $^ $(LIBS)
 
 _packages = $(addprefix $(PACKAGE),.xz .gz)
@@ -158,6 +177,17 @@ $(PACKAGE):	$(I18Npo) $(_all_sources)
 %.asc:		%
 	$(GPG) --detach-sign --armor --output $@ $<
 
+$(DESTDIR)$(plugindir) $(DESTDIR)$(udevdir):
+	$(MKDIR_P) $@
+
+install:	install-i18n install-plugin install-extra
+
+install-plugin:	$(vdr_PLUGINS) | $(DESTDIR)$(plugindir) 
+	$(INSTALL_PLUGIN) $(vdr_PLUGINS) $(DESTDIR)$(plugindir)/
+
+install-extra:	vdr-inputdev | $(DESTDIR)$(udevdir)
+	$(INSTALL_BIN) vdr-inputdev $(DESTDIR)$(udevdir)/
+
 clean:
-	@rm -f $(OBJS) libvdr*.so libvdr*.so.* *.d *.tgz core* *~ $(PODIR)/*.mo $(PODIR)/*.pot
+	@rm -f $(OBJS) libvdr*.so libvdr*.so.* *.d *.tgz core* *~ po/*.mo po/*.pot
 	@rm -f vdr-inputdev
