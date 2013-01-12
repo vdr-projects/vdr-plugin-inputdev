@@ -39,6 +39,7 @@ INSTALL_DATA	?= $(INSTALL) -p -m 0644
 INSTALL_PLUGIN	?= $(INSTALL) -p -m 0755
 INSTALL_BIN	?= $(INSTALL) -p -m 0755
 MKDIR_P		?= $(INSTALL) -d -m 0755
+TOUCH_C		?= touch -c
 
 SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
 SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
@@ -150,13 +151,17 @@ $(_all_inst_mo):$(call _full_mo_path,%):	po/%.mo
 	$(MKDIR_P) ${@D}
 	$(INSTALL_DATA) $< $@
 
+i18n:	$(_mo_files)
+
 install-i18n:	$(_all_inst_mo)
 
 %.po:	$(POTFILE)
 	$(MSGMERGE) $(AM_MSGMERGEFLAGS) $@ $<
+	@$(TOUCH_C) $@
 
 $(POTFILE):	$(plugin_SOURCES)
 	$(XGETTEXT) $(AM_XGETTEXTFLAGS) -o $@ $^
+	@$(TOUCH_C) $@
 
 ### Targets:
 vdr-inputdev:	$(helper_SOURCES)
