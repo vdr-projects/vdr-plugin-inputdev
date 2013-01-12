@@ -100,3 +100,16 @@ Creating keymap rules
   4. Press the keys you want to configure, record their scancode and
      the wanted key identifier.  See cInputDevice::install_keymap
      (inputdev.c) for supported key identifiers.
+
+
+Magic Keysequence
+=================
+
+By default, all input devices -- including the normal keyboard -- will
+be grabbed by device and can not be used by other programs anymore.
+To allow maintainance tasks like logging in on the console, the plugin
+detaches a input device when it recognizes the magic keysequence
+
+		    SHIFT - SHIFT - ESCAPE - SHIFT
+
+from there.
