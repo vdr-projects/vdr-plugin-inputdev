@@ -28,22 +28,7 @@
 
 #include <vdr/plugin.h>
 
-
-#define ARRAY_SIZE(_a)	(sizeof(_a) / sizeof(_a)[0])
-inline static bool test_bit(unsigned int bit, unsigned long const mask[])
-{
-	unsigned long	m = mask[bit / (sizeof mask[0] * 8)];
-	unsigned int	i = bit % (sizeof mask[0] * 8);
-
-	return (m & (1u << i)) != 0u;
-}
-
-inline static void set_bit(unsigned int bit, unsigned long mask[])
-{
-	unsigned int	i = bit % (sizeof mask[0] * 8);
-
-	mask[bit / (sizeof mask[0] * 8)] |= (1u << i);
-}
+#include "util.h"
 
 class MagicState {
 private:
