@@ -20,6 +20,7 @@
 #include <vdr/plugin.h>
 
 #include "inputdev.h"
+#include "modmap.h"
 
 static char const *DEFAULT_SOCKET_PATH = SOCKET_PATH;
 static const char *VERSION        = PACKAGE_VERSION;
@@ -28,6 +29,7 @@ static const char *DESCRIPTION    = trNOOP("Linux input device plugin");
 class cInputDevicePlugin : public cPlugin {
 private:
 	class cInputDeviceController	*controller_;
+	ModifierMap			mod_map_;
 
 	enum {
 		enSOCKET,
@@ -40,6 +42,7 @@ private:
 	}				socket_;
 
 	cString				coldplug_dir;
+	cString				mod_map_fname_;
 
 private:
 	cInputDevicePlugin(cInputDevicePlugin const &);
@@ -73,6 +76,7 @@ bool cInputDevicePlugin::ProcessArgs(int argc, char *argv[])
 	static struct option const	CMDLINE_OPTIONS[] = {
 		{ "systemd", required_argument, NULL, 'S' },
 		{ "socket",  required_argument, NULL, 's' },
+		{ "modmap",  required_argument, NULL, 'M' },
 		{ }
 	};
 
@@ -83,7 +87,7 @@ bool cInputDevicePlugin::ProcessArgs(int argc, char *argv[])
 	for (;;) {
 		int		c;
 
-		c = getopt_long(argc, argv, "S:s:", CMDLINE_OPTIONS, NULL);
+		c = getopt_long(argc, argv, "S:s:M:", CMDLINE_OPTIONS, NULL);
 		if (c == -1)
 			break;
 
@@ -98,6 +102,7 @@ bool cInputDevicePlugin::ProcessArgs(int argc, char *argv[])
 			return false;
 #endif
 		case 's':  socket_path = optarg; break;
+		case 'M':  mod_map_fname_ = optarg; break;
 		default:
 			esyslog("%s: invalid option\n", Name());
 			return false;
@@ -129,7 +134,11 @@ bool cInputDevicePlugin::Initialize(void)
 {
 	bool		is_ok;
 
-	controller_ = new cInputDeviceController(*this);
+	if (mod_map_fname_ != "")
+		mod_map_.read_modmap(mod_map_fname_);
+	// \todo: handle errors?
+
+	controller_ = new cInputDeviceController(*this, mod_map_);
 
 	switch (socket_type_) {
 #ifdef VDR_USE_SYSTEMD

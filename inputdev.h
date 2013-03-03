@@ -28,6 +28,7 @@ public:
 	virtual void	handle_pollin() = 0;
 };
 
+class ModifierMap;
 class cPlugin;
 class cInputDevice;
 class cInputDeviceController : protected cRemote, protected cThread,
@@ -35,6 +36,7 @@ class cInputDeviceController : protected cRemote, protected cThread,
 {
 private:
 	cPlugin			&plugin_;
+	ModifierMap		&mod_map_;
 	int			fd_udev_;
 	int			fd_epoll_;
 	int			fd_alive_[2];
@@ -63,7 +65,7 @@ protected:
 	virtual void	handle_pollin();
 
 public:
-	explicit cInputDeviceController(cPlugin &p);
+	explicit cInputDeviceController(cPlugin &p, ModifierMap &modmap);
 	virtual ~cInputDeviceController();
 
 	bool		initialize(char const *coldplug_dir);
@@ -82,10 +84,21 @@ public:
 	bool		set_repeat_rate(unsigned int delay_ms,
 					unsigned int rate_ms);
 
+	ModifierMap const	&get_modmap() const { return mod_map_; }
+
 	static void	close(int &fd);
 
 	bool	Put(uint64_t Code, bool Repeat, bool Release) {
 		return cRemote::Put(Code, Repeat, Release);
+	}
+
+	bool	PutRaw(uint64_t Code, bool Repeat, bool Release) {
+		if (Repeat)
+			Code |= k_Repeat;
+		if (Release)
+			Code |= k_Release;
+
+		return cRemote::Put(static_cast<enum eKeys>(Code));
 	}
 };
 

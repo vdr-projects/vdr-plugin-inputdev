@@ -28,6 +28,7 @@
 
 #include <vdr/plugin.h>
 
+#include "modmap.h"
 #include "util.h"
 
 class MagicState {
@@ -146,15 +147,6 @@ bool MagicState::process(struct input_event const &ev)
 }
 
 class cInputDevice : public cListObject, public cEpollHandler {
-public:
-	enum modifier {
-		modSHIFT,
-		modCONTROL,
-		modALT,
-		modMETA,
-		modNUMLOCK,
-	};
-
 private:
 	cInputDeviceController	&controller_;
 	cString			dev_path_;
@@ -181,6 +173,10 @@ public:
 	cInputDevice(cInputDeviceController &controller,
 		     cString const &dev_path);
 	virtual ~cInputDevice();
+
+	virtual int Compare(cListObject const &b) const {
+		return Compare(dynamic_cast<cInputDevice const &>(b));
+	}
 
 	virtual int Compare(cInputDevice const &b) const {
 		return this->dev_t_ - b.dev_t_;
@@ -435,6 +431,11 @@ void cInputDevice::handle_hup(void)
 	controller_.remove_device(this);
 }
 
+static uint64_t wchar_t_to_ekey(wchar_t c)
+{
+	return KBDKEY(c); 
+}
+
 void cInputDevice::handle_pollin(void)
 {
 	struct input_event	ev;
@@ -445,6 +446,7 @@ void cInputDevice::handle_pollin(void)
 	bool			is_repeated = false;
 	bool			is_valid;
 	bool			is_internal = false;
+	bool			is_raw = false;
 
 	rc = read(fd_, &ev, sizeof ev);
 	if (rc < 0 && errno == EINTR)
@@ -492,7 +494,8 @@ void cInputDevice::handle_pollin(void)
 	switch (ev.type) {
 	case EV_KEY: {
 		unsigned long	mask = 0;
-		
+		wchar_t		c;
+
 		is_valid = true;
 
 		switch (ev.value) {
@@ -512,26 +515,26 @@ void cInputDevice::handle_pollin(void)
 		switch (ev.code) {
 		case KEY_LEFTSHIFT:
 		case KEY_RIGHTSHIFT:
-			set_bit(modSHIFT, &mask);
+			set_bit(ModifierMap::modSHIFT, &mask);
 			break;
 
 		case KEY_LEFTCTRL:
 		case KEY_RIGHTCTRL:
-			set_bit(modCONTROL, &mask);
+			set_bit(ModifierMap::modCONTROL, &mask);
 			break;
 
 		case KEY_LEFTALT:
 		case KEY_RIGHTALT:
-			set_bit(modALT, &mask);
+			set_bit(ModifierMap::modALT, &mask);
 			break;
 
 		case KEY_LEFTMETA:
 		case KEY_RIGHTMETA:
-			set_bit(modMETA, &mask);
+			set_bit(ModifierMap::modMETA, &mask);
 			break;
 
 		case KEY_NUMLOCK:
-			set_bit(modNUMLOCK, &mask);
+			set_bit(ModifierMap::modNUMLOCK, &mask);
 			break;
 
 		default:
@@ -539,7 +542,7 @@ void cInputDevice::handle_pollin(void)
 		}
 
 		if (mask == 0) {
-			code = generate_code(0, ev.type, ev.code);
+			is_internal = false;
 		} else if (is_released) {
 			this->modifiers_ &= ~mask;
 			is_internal = true;
@@ -549,6 +552,17 @@ void cInputDevice::handle_pollin(void)
 		} else {
 			// repeated events
 			is_internal = true;
+		}
+
+		if (is_internal) {
+			;		// noop
+		} else if (controller_.get_modmap().translate(
+				 c, ev.code, this->modifiers_)) {
+			code = wchar_t_to_ekey(c);
+			is_raw = true;
+		} else {
+			code = generate_code(0, ev.type, ev.code);
+			is_raw = false;
 		}
 
 		break;
@@ -568,9 +582,17 @@ void cInputDevice::handle_pollin(void)
 		return;
 	}
 
-	if (!controller_.Put(code, is_repeated, is_released)) {
-		esyslog("%s: failed to put [%02x,%04x,%u] event\n",
-			controller_.plugin_name(), ev.type, ev.code, ev.value);
+	if (is_raw && !controller_.PutRaw(code, is_repeated, is_released))
+		rc = -1;
+	else if (!is_raw && controller_.Put(code, is_repeated, is_released))
+		rc = -1;
+	else
+		rc = 0;
+
+	if (rc < 0) {
+		esyslog("%s: failed to put [%02x,%04x,%u] event [%016" PRIX64 ", %d, %d\n",
+			controller_.plugin_name(), ev.type, ev.code, ev.value,
+			code, is_repeated, is_released);
 		return;
 	}
 }
@@ -600,8 +622,9 @@ bool cInputDevice::set_repeat_rate(unsigned int delay_ms,
 
 // ===========================
 
-cInputDeviceController::cInputDeviceController(cPlugin &p)
-	: cRemote("inputdev"), plugin_(p), fd_udev_(-1), fd_epoll_(-1),
+cInputDeviceController::cInputDeviceController(cPlugin &p, ModifierMap &mod_map)
+	: cRemote("inputdev"), plugin_(p), mod_map_(mod_map),
+	  fd_udev_(-1), fd_epoll_(-1),
 	  repeat_delay_ms_(250), repeat_rate_ms_(100)
 {
 	fd_alive_[0] = -1;
@@ -718,8 +741,8 @@ bool cInputDeviceController::open_udev_socket(char const *sock_path)
 	rc = bind(fd, reinterpret_cast<sockaddr const *>(&addr), sizeof addr);
 	umask(old_umask);
 	if (rc < 0) {
-		esyslog("%s: bind() failed: %s\n",
-			plugin_.Name(), strerror(errno));
+		esyslog("%s: bind(%s) failed: %s\n",
+			plugin_.Name(), sock_path, strerror(errno));
 		goto err;
 	}
 

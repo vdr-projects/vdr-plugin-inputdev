@@ -5,6 +5,8 @@ plugin_SOURCES = \
 	inputdev.cc \
 	inputdev.h \
 	plugin.cc \
+	modmap.cc \
+	modmap.h
 
 helper_SOURCES = \
 	udevhelper.c
@@ -33,6 +35,8 @@ MSGFMT		?= msgfmt
 MSGMERGE	?= msgmerge
 XGETTEXT	?= xgettext
 PKG_CONFIG	?= pkg-config
+GPERF		?= gperf
+SED		?= sed
 
 INSTALL		?= install
 INSTALL_DATA	?= $(INSTALL) -p -m 0644
@@ -40,6 +44,8 @@ INSTALL_PLUGIN	?= $(INSTALL) -p -m 0755
 INSTALL_BIN	?= $(INSTALL) -p -m 0755
 MKDIR_P		?= $(INSTALL) -d -m 0755
 TOUCH_C		?= touch -c
+
+GPERF_FLAGS	 = -L C++ --readonly-tables --enum --ignore-case
 
 SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
 SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
@@ -171,6 +177,8 @@ $(POTFILE):	$(plugin_SOURCES)
 vdr-inputdev:	$(helper_SOURCES)
 	$(CC) $(call _buildflags,C) $^ -o $@
 
+modmap.o:	gen-keymap.h
+
 $(vdr_PLUGINS): $(plugin_OBJS)
 	$(CXX) $(AM_LDFLAGS) $(LDFLAGS) $(LDFLAGS_$@) -shared -o $@ $^ $(LIBS)
 
@@ -180,7 +188,7 @@ dist:  $(_packages) $(addsuffix .asc,$(_packages))
 
 _tar_transform = --transform='s!^!$(ARCHIVE)/!'
 
-$(PACKAGE):	$(I18Npo) $(_all_sources)
+$(PACKAGE):	$(_po_files) $(_all_sources)
 	$(TAR) cf $@ $(TAR_FLAGS) $(_tar_transform) $(sort $^)
 
 %.asc:		%
@@ -200,3 +208,25 @@ install-extra:	vdr-inputdev | $(DESTDIR)$(udevdir)
 clean:
 	@rm -f $(OBJS) libvdr*.so libvdr*.so.* *.d *.tgz core* *~ po/*.mo po/*.pot
 	@rm -f vdr-inputdev
+
+###
+
+KEY_BLACKLIST = RESERVED\|MAX\|CNT
+
+KEYMAP_SED = \
+  -e '/^\#define KEY_\($(KEY_BLACKLIST)\)$$/d' \
+  -e '/^\#define KEY_/{' \
+  -e 's/^\#define KEY_\([A-Za-z0-9_]\+\)[[:space:]]*$$/\L\1\E,KEY_\1/p' \
+  -e '};d'
+
+gen-keymap.h:	gen-keymap.perf
+	$(GPERF) $(GPERF_FLAGS) -t $< --output-file=$@
+
+gen-keymap.perf:	Makefile
+	rm -f $@ $@.tmp
+	@echo '%readonly-tables' > $@.tmp
+	@echo 'struct keymap_def { char const *name; unsigned int num; };' >> $@.tmp
+	@echo '%%' >> $@.tmp
+	@$(CC) $(call _buildflags,C) -imacros 'linux/input.h' -E -dN - </dev/null | \
+		$(SED) $(KEYMAP_SED) | sort -n >>$@.tmp
+	@mv $@.tmp $@

@@ -3,7 +3,9 @@
 *.so
 *.so.1.*
 /.dependencies
-/vdr-inputdev
-/vdr-inputdev-*.tar*
+/gen-keymap.h
+/gen-keymap.perf
 /po/*.mo
 /po/inputdev.pot
+/vdr-inputdev
+/vdr-inputdev-*.tar*
