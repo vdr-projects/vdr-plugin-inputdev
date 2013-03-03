@@ -44,6 +44,10 @@ TOUCH_C		?= touch -c
 SYSTEMD_CFLAGS	 = $(shell ${PKG_CONFIG} --cflags libsystemd-daemon || echo "libsystemd_missing")
 SYSTEMD_LIBS	 = $(shell ${PKG_CONFIG} --libs libsystemd-daemon || echo "libsystemd_missing")
 
+VDR_CFLAGS	 = $(shell ${PKG_CONFIG} --variable=cflags vdr)
+VDR_CXXFLAGS	 = $(shell ${PKG_CONFIG} --variable=cxxflags vdr)
+
+
 TAR_FLAGS	 = --owner root --group root --mode a+rX,go-w
 
 AM_CPPFLAGS	 = -DPACKAGE_VERSION=\"${VERSION}\" -DSOCKET_PATH=\"${SOCKET_PATH}\" \
@@ -57,8 +61,8 @@ AM_XGETTEXTFLAGS = -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP \
 
 WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wextra
 
-AM_CXXFLAGS	+= $(WARN_OPTS)
-AM_CFLAGS	+= $(WARN_OPTS)
+AM_CXXFLAGS	+= $(VDR_CXXFLAGS) $(WARN_OPTS)
+AM_CFLAGS	+= $(VDR_CFLAGS) $(WARN_OPTS)
 
 ifneq ($(USE_SYSTEMD),)
   AM_CPPFLAGS	+= -DVDR_USE_SYSTEMD
@@ -89,7 +93,7 @@ SOCKET_PATH = /var/run/vdr/inputdev
 
 ### The version number of VDR's plugin API (taken from VDR's "config.h"):
 
-APIVERSION = $(shell sed -ne '/define APIVERSION/s/^.*"\(.*\)".*$$/\1/p' $(VDRDIR)/config.h)
+APIVERSION = $(shell ${PKG_CONFIG} --variable=apiversion vdr)
 
 ### The name of the distribution archive:
 
