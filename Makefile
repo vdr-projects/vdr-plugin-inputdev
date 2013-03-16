@@ -78,7 +78,7 @@ endif
 
 prefix		 = /usr/local
 datadir		 = $(prefix)/share
-plugindir	 = $(patsubst $(DESTDIR)/%,/%,$(PLUGINLIBDIR))
+plugindir	 = $(shell ${PKG_CONFIG} --variable=libdir vdr)
 udevdir		 = $(prefix)/lib/udev
 localedir	 = $(datadir)/locale
 
@@ -87,8 +87,6 @@ vdr_PLUGINS	 = libvdr-$(PLUGIN).so.$(APIVERSION)
 ### The directory environment:
 
 VDRDIR ?= ../../..
-LIBDIR ?= ../../lib
-TMPDIR ?= /tmp
 
 SOCKET_PATH = /var/run/vdr/inputdev
 
