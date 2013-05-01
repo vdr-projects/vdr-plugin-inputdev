@@ -65,7 +65,7 @@ AM_XGETTEXTFLAGS = -C -cTRANSLATORS --no-wrap --no-location -k -ktr -ktrNOOP \
 		   --package-name=vdr-$(PLUGIN) --package-version=$(VERSION) \
 		   --msgid-bugs-address='<see README>'
 
-WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wextra
+WARN_OPTS	 = -Wall -W -Wno-missing-field-initializers -Wno-unused-parameter -Wextra
 
 AM_CXXFLAGS	+= $(VDR_CXXFLAGS) $(WARN_OPTS)
 AM_CFLAGS	+= $(VDR_CFLAGS) $(WARN_OPTS)
