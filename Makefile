@@ -228,3 +228,27 @@ gen-keymap.perf:	Makefile
 	@$(CC) $(call _buildflags,C) -imacros 'linux/input.h' -E -dN - </dev/null | \
 		$(SED) $(KEYMAP_SED) | sort -n >>$@.tmp
 	@mv $@.tmp $@
+
+
+### {{{ VDR localbuild compat section
+###
+ifeq "$(origin VDRDIR)" "command line"
+## Do not remove it.  vdr greps for these magic strings
+# $(LIBDIR)/$(APIVERSION)
+# PKGCFG
+PKG_CONFIG_PATH := $(VDRDIR)$(if $(PKG_CONFIG_PATH),:$(PKG_CONFIG_PATH))
+export PKG_CONFIG_PATH
+
+AM_CPPFLAGS += -I${VDRDIR}/include
+
+# The 'shell' function does not take makefile variables into account;
+# pass it manually
+VDR_CFLAGS	 = $(shell env PKG_CONFIG_PATH=${PKG_CONFIG_PATH} ${PKG_CONFIG} --variable=cflags vdr)
+VDR_CXXFLAGS	 = $(shell env PKG_CONFIG_PATH=${PKG_CONFIG_PATH} ${PKG_CONFIG} --variable=cxxflags vdr)
+
+all:	compat-symlink
+compat-symlink:	$(vdr_PLUGINS)
+	rm -f libvdr-$(PLUGIN).so
+	ln -s libvdr-$(PLUGIN).so.$(APIVERSION) libvdr-$(PLUGIN).so
+endif
+### }}} VDR localbuild compat section
