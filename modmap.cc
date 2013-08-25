@@ -88,6 +88,7 @@ static struct {
 	{ KEY_COMMA,      { ',',  '<' } },
 	{ KEY_DOT,        { '.',  '>' } },
 	{ KEY_SLASH,      { '/',  '?' } },
+	{ KEY_SPACE,	  { ' ',  ' ' } },
 };
 
 void ModifierMap::set_default_tables()
