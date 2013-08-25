@@ -77,6 +77,17 @@ static struct {
 	{ KEY_7, { '7', '&' } },
 	{ KEY_8, { '8', '*' } },
 	{ KEY_9, { '9', '(' } },
+	{ KEY_GRAVE,      { '`',  '~' } },
+	{ KEY_MINUS,      { '-',  '_' } },
+	{ KEY_EQUAL,      { '=',  '+' } },
+	{ KEY_LEFTBRACE,  { '[',  '{' } },
+	{ KEY_RIGHTBRACE, { ']',  '}' } },
+	{ KEY_SEMICOLON,  { ';',  ':' } },
+	{ KEY_APOSTROPHE, { '\'', '"' } },
+	{ KEY_BACKSLASH,  { '\\', '|' } },
+	{ KEY_COMMA,      { ',',  '<' } },
+	{ KEY_DOT,        { '.',  '>' } },
+	{ KEY_SLASH,      { '/',  '?' } },
 };
 
 void ModifierMap::set_default_tables()
