@@ -582,12 +582,10 @@ void cInputDevice::handle_pollin(void)
 		return;
 	}
 
-	if (is_raw && !controller_.PutRaw(code, is_repeated, is_released))
-		rc = -1;
-	else if (!is_raw && controller_.Put(code, is_repeated, is_released))
-		rc = -1;
+	if (is_raw)
+		rc = controller_.PutRaw(code, is_repeated, is_released) ? 0 : -1;
 	else
-		rc = 0;
+		rc = controller_.Put(code, is_repeated, is_released) ? 0 : -1;
 
 	if (rc < 0) {
 		esyslog("%s: failed to put [%02x,%04x,%u] event [%016" PRIX64 ", %d, %d\n",
