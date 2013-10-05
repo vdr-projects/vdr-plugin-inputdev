@@ -588,8 +588,9 @@ void cInputDevice::handle_pollin(void)
 		rc = controller_.Put(code, is_repeated, is_released) ? 0 : -1;
 
 	if (rc < 0) {
-		esyslog("%s: failed to put [%02x,%04x,%u] event [%016" PRIX64 ", %d, %d\n",
+		esyslog("%s: failed to put [%02x,%04x,%u] %sevent [%016" PRIX64 ", %d, %d]\n",
 			controller_.plugin_name(), ev.type, ev.code, ev.value,
+			is_raw ? "raw " : "",
 			code, is_repeated, is_released);
 		return;
 	}
