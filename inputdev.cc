@@ -31,6 +31,17 @@
 #include "modmap.h"
 #include "util.h"
 
+namespace Time {
+	static int compare(struct timespec const &a,
+			   struct timespec const &b);
+
+	static void add(struct timespec &res,
+			struct timespec const &a,
+			struct timespec const &b);
+
+	static bool check_clock_gettime(void);
+};
+
 class MagicState {
 private:
 	static bool const	IS_SUPPORTED_;
@@ -38,12 +49,6 @@ private:
 	unsigned int		state_;
 	struct timespec		next_;
 
-	static int compare(struct timespec const &a,
-			   struct timespec const &b);
-
-	static void add(struct timespec &res,
-			struct timespec const &a,
-			struct timespec const &b);
 
 public:
 	static struct timespec const	TIMEOUT;
@@ -53,7 +58,7 @@ public:
 
 };
 
-static bool check_clock_gettime(void)
+static bool Time::check_clock_gettime(void)
 {
 	struct timespec		tmp;
 
@@ -67,10 +72,10 @@ static bool check_clock_gettime(void)
 	return true;
 }
 
-bool const		MagicState::IS_SUPPORTED_ = check_clock_gettime();
+bool const		MagicState::IS_SUPPORTED_ = Time::check_clock_gettime();
 struct timespec const	MagicState::TIMEOUT = { 2, 500000000 };
 
-int MagicState::compare(struct timespec const &a, struct timespec const &b)
+int Time::compare(struct timespec const &a, struct timespec const &b)
 {
 	if (a.tv_sec < b.tv_sec)
 		return -1;
@@ -84,8 +89,8 @@ int MagicState::compare(struct timespec const &a, struct timespec const &b)
 		return 0;
 }
 
-void MagicState::add(struct timespec &res,
-		     struct timespec const &a, struct timespec const &b)
+void Time::add(struct timespec &res,
+	       struct timespec const &a, struct timespec const &b)
 {
 	assert(a.tv_nsec < 1000000000);
 	assert(b.tv_nsec < 1000000000);
@@ -127,7 +132,7 @@ bool MagicState::process(struct input_event const &ev)
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	if (state_ > 0 && compare(next_, now) < 0)
+	if (state_ > 0 && Time::compare(next_, now) < 0)
 		// reset state due to timeout
 		state_ = 0;
 
@@ -135,7 +140,7 @@ bool MagicState::process(struct input_event const &ev)
 		state_ = 0;
 	} else {
 		++state_;
-		add(next_, now, TIMEOUT);
+		Time::add(next_, now, TIMEOUT);
 	}
 
 	if (state_ == ARRAY_SIZE(SEQUENCE)) {
