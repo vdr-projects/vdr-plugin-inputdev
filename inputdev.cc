@@ -35,9 +35,21 @@ namespace Time {
 	static int compare(struct timespec const &a,
 			   struct timespec const &b);
 
+	static int compare(struct timeval const &a,
+			   struct timeval const &b);
+
 	static void add(struct timespec &res,
 			struct timespec const &a,
 			struct timespec const &b);
+
+	static void add(struct timeval &res,
+			struct timeval const &a,
+			struct timeval const &b);
+
+	static bool is_null(struct timeval const &a)
+	{
+		return a.tv_sec == 0 && a.tv_usec == 0;
+	}
 
 	static bool check_clock_gettime(void);
 };
@@ -89,6 +101,20 @@ int Time::compare(struct timespec const &a, struct timespec const &b)
 		return 0;
 }
 
+int Time::compare(struct timeval const &a, struct timeval const &b)
+{
+	if (a.tv_sec < b.tv_sec)
+		return -1;
+	else if (a.tv_sec > b.tv_sec)
+		return + 1;
+	else if (a.tv_usec < b.tv_usec)
+		return -1;
+	else if (a.tv_usec > b.tv_usec)
+		return +1;
+	else
+		return 0;
+}
+
 void Time::add(struct timespec &res,
 	       struct timespec const &a, struct timespec const &b)
 {
@@ -100,6 +126,21 @@ void Time::add(struct timespec &res,
 
 	if (res.tv_nsec >= 1000000000) {
 		res.tv_nsec -= 1000000000;
+		res.tv_sec  += 1;
+	}
+}
+
+void Time::add(struct timeval &res,
+	       struct timeval const &a, struct timeval const &b)
+{
+	assert(a.tv_usec < 1000000000);
+	assert(b.tv_usec < 1000000000);
+
+	res.tv_sec  = a.tv_sec + b.tv_sec;
+	res.tv_usec = a.tv_usec + b.tv_usec;
+
+	if (res.tv_usec >= 1000000) {
+		res.tv_usec -= 1000000;
 		res.tv_sec  += 1;
 	}
 }
