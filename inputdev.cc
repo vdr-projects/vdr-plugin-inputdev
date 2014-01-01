@@ -206,6 +206,10 @@ private:
 	unsigned long		modifiers_;
 	unsigned int		orig_rate_[2];
 
+	struct timeval		repeat_rate_;
+	unsigned int		last_key_val_;
+	struct timeval		next_key_tm_;
+
 	cInputDevice(cInputDevice const &);
 	cInputDevice & operator	= (cInputDevice const &);
 
@@ -462,6 +466,9 @@ bool cInputDevice::start(int efd)
 		orig_rate_[1] = 0;
 	}
 
+	repeat_rate_.tv_sec  = (orig_rate_[1] / 1000);
+	repeat_rate_.tv_usec = (orig_rate_[1] % 1000) * 1000;
+
 	rc = epoll_ctl(efd, EPOLL_CTL_ADD, fd_, &ev);
 	if (rc < 0) {
 		esyslog("%s: epoll_ctl(ADD, <%s>) failed: %s\n",
@@ -539,6 +546,22 @@ void cInputDevice::handle_pollin(void)
 	if (ev.type != EV_KEY)
 		// ignore events which are no valid key events
 		return;
+
+	if (quirks_.broken_repeat && !Time::is_null(repeat_rate_) &&
+	    ev.value == 1) {
+		if (last_key_val_ == ev.code &&
+		    Time::compare(next_key_tm_, ev.time) > 0) {
+			dsyslog("%s: %s received key too fast\n",
+				controller_.plugin_name(), get_dev_path());
+
+			// same key arrived faster than configured by
+			// EVIOCSREP; ignore it
+			return;
+		}
+
+		last_key_val_ = ev.code;
+		Time::add(next_key_tm_, ev.time, repeat_rate_);
+	}
 
 	if (0)
 		dsyslog("%s: event{%s}=[%lu.%06u, %02x, %04x, %d]\n",
@@ -676,8 +699,26 @@ bool cInputDevice::set_repeat_rate(unsigned int delay_ms,
 		esyslog("%s: %s failed to set repeat rate: %s\n",
 			controller_.plugin_name(), get_dev_path(),
 			strerror(errno));
+
+		repeat_rate_.tv_sec  = 0;
+		repeat_rate_.tv_usec = 0;
+
 		return false;
 	}
+
+	rc = ioctl(fd_, EVIOCGREP, rep);
+	if (rc >= 0) {
+		isyslog("%s: %s has repeat rate setting of [%u,%u]\n",
+			controller_.plugin_name(), get_dev_path(),
+			rep[0], rep[1]);
+
+		// todo: handle this as an error?
+
+		rate_ms = rep[1];
+	}
+
+	repeat_rate_.tv_sec  = (rate_ms / 1000);
+	repeat_rate_.tv_usec = (rate_ms % 1000) * 1000;
 
 	return true;
 }
