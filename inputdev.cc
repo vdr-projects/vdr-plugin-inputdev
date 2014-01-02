@@ -986,7 +986,7 @@ void cInputDeviceController::change_quirk(char const *dev_path,
 			++quirk;
 			break;
 		case '-':
-			do_set = true;
+			do_set = false;
 			++quirk;
 			break;
 		default:
