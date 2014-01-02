@@ -287,7 +287,7 @@ void cInputDevice::change_quirk(char const *quirk, bool do_set)
 		quirks_.change(quirk, do_set);
 		dsyslog("%s: %s %s quirk '%s'\n", controller_.plugin_name(),
 			get_dev_path(),
-			do_set ? "set" : "cleared",
+			do_set ? "enabled" : "disabled",
 			quirk);
 	} catch (Quirks::UnknownQuirkError const &e) {
 		esyslog("%s: %s %s\n", controller_.plugin_name(),
