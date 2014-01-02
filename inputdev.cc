@@ -890,39 +890,42 @@ void cInputDeviceController::Action(void)
 	}
 }
 
-void cInputDeviceController::remove_device(char const *dev_path)
+class cInputDevice *cInputDeviceController::find_by_path(char const *path)
 {
 	class cInputDevice	*dev = NULL;
 	struct stat		st;
 
-	if (stat(dev_path, &st) < 0) {
-		esyslog("%s: fstat(%s) failed: %s\n", plugin_name(),
-			dev_path, strerror(errno));
+	if (stat(path, &st) < 0) {
+		dsyslog("%s: fstat(%s) failed: %s\n", plugin_name(),
+			path, strerror(errno));
 	} else {
-		cMutexLock	lock(&dev_mutex_);
-
 		for (cInputDevice *i = devices_.First();
 		     i != NULL && dev == NULL;
 		     i = devices_.Next(i)) {
 			if (i->Compare(st.st_rdev) == 0)
 				dev = i;
 		}
-
-		if (dev != NULL) {
-			dev->stop(fd_epoll_);
-
-			assert(dev->container == &devices_);
-			devices_.Del(dev, false);
-
-			gc_devices_.Add(dev);
-			dev->container = &gc_devices_;
-		}
 	}
 
-	if (dev == NULL) {
+	return dev;
+}
+
+void cInputDeviceController::remove_device(char const *dev_path)
+{
+	cMutexLock		lock(&dev_mutex_);
+	class cInputDevice	*dev = find_by_path(dev_path);
+
+	if (!dev) {
 		esyslog("%s: device '%s' not found\n",
 			plugin_name(), dev_path);
-		return;
+	} else {
+		dev->stop(fd_epoll_);
+
+		assert(dev->container == &devices_);
+		devices_.Del(dev, false);
+
+		gc_devices_.Add(dev);
+		dev->container = &gc_devices_;
 	}
 }
 

@@ -58,6 +58,8 @@ private:
 	void		dump_active_devices();
 	void		dump_gc_devices();
 
+	class cInputDevice	*find_by_path(char const *path);
+
 protected:
 	virtual void	Action(void);
 
