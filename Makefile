@@ -6,7 +6,9 @@ plugin_SOURCES = \
 	inputdev.h \
 	plugin.cc \
 	modmap.cc \
-	modmap.h
+	modmap.h \
+	quirks.cc \
+	quirks.h
 
 helper_SOURCES = \
 	udevhelper.c

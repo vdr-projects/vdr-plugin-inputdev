@@ -30,6 +30,7 @@
 
 #include "modmap.h"
 #include "util.h"
+#include "quirks.h"
 
 namespace Time {
 	static int compare(struct timespec const &a,
@@ -200,6 +201,7 @@ private:
 	int			fd_;
 	dev_t			dev_t_;
 	class MagicState	magic_state_;
+	class Quirks		quirks_;
 
 	unsigned long		modifiers_;
 	unsigned int		orig_rate_[2];
@@ -246,6 +248,7 @@ public:
 					unsigned int rate_ms);
 
 	void		dump(void) const;
+	void		change_quirk(char const *quirk, bool do_set);
 
 	static uint64_t	generate_code(uint16_t type, uint16_t code,
 				      uint32_t value);
@@ -272,6 +275,20 @@ void cInputDevice::dump(void) const
 	dsyslog("%s:   %lx %s (%s), fd=%d\n", controller_.plugin_name(),
 		static_cast<unsigned long>(dev_t_),
 		get_dev_path(), get_description(), get_fd());
+}
+
+void cInputDevice::change_quirk(char const *quirk, bool do_set)
+{
+	try {
+		quirks_.change(quirk, do_set);
+		dsyslog("%s: %s %s quirk '%s'\n", controller_.plugin_name(),
+			get_dev_path(),
+			do_set ? "set" : "cleared",
+			quirk);
+	} catch (Quirks::UnknownQuirkError const &e) {
+		esyslog("%s: %s %s\n", controller_.plugin_name(),
+			get_dev_path(), e.what());
+	}
 }
 
 uint64_t cInputDevice::generate_code(uint16_t type, uint16_t code,
@@ -910,6 +927,36 @@ class cInputDevice *cInputDeviceController::find_by_path(char const *path)
 	return dev;
 }
 
+void cInputDeviceController::change_quirk(char const *dev_path,
+					  char const *quirk)
+{
+	cMutexLock		lock(&dev_mutex_);
+	class cInputDevice	*dev = find_by_path(dev_path);
+
+	if (!dev) {
+		esyslog("%s: device '%s' not found\n",
+			plugin_name(), dev_path);
+	} else {
+		bool	do_set;
+
+		switch (quirk[0]) {
+		case '+':
+			do_set = true;
+			++quirk;
+			break;
+		case '-':
+			do_set = true;
+			++quirk;
+			break;
+		default:
+			do_set = true;
+			break;
+		}
+
+		dev->change_quirk(quirk, do_set);
+	}
+}
+
 void cInputDeviceController::remove_device(char const *dev_path)
 {
 	cMutexLock		lock(&dev_mutex_);
@@ -1067,6 +1114,8 @@ void cInputDeviceController::handle_pollin(void)
 		add_device(dev);
 	} else if (strcasecmp(cmd, "remove") == 0) {
 		remove_device(dev);
+	} else if (strncasecmp(cmd, "quirk:", 6) == 0) {
+		change_quirk(dev, cmd+6);
 	} else if (strcasecmp(cmd, "dump") == 0) {
 		bool	is_all = strcasecmp(dev, "all") == 0;
 		if (is_all || strcasecmp(dev, "active") == 0)

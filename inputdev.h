@@ -82,6 +82,7 @@ public:
 	bool		add_device(char const *dev);
 	void		remove_device(char const *dev);
 	void		remove_device(class cInputDevice *dev);
+	void		change_quirk(char const *dev, char const *quirk);
 
 	bool		set_repeat_rate(unsigned int delay_ms,
 					unsigned int rate_ms);
